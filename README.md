@@ -11,19 +11,22 @@ SIAS is a full-stack web application that combines **PLC ladder logic simulation
 | Area | Details |
 |---|---|
 | **Sensor Monitoring** | Temperature, Pressure, Vibration, Current, RPM, Oil Level — simulated with realistic drift and noise |
+| **PLC Integration** | Built-in simulation plus optional Modbus TCP bridge (`PLC_MODE=modbus`) for real PLC output-coil mirroring |
 | **PLC Ladder Logic** | 5 rungs: Motor Run, Coolant Pump, Lube Pump, Pressure Relief, Alarm Horn — with interlocks and safety latches |
-| **Predictive ML** | Isolation Forest (scikit-learn) trained online; outputs anomaly score, health score (0–100) and Remaining Useful Life estimate |
+| **Predictive ML** | Isolation Forest with rolling-window engineered features, online retraining, drift score and persisted model checkpoint |
 | **Live Dashboard** | Real-time sensor gauges, trend charts (Chart.js), health history and anomaly score charts — updated every 2 s via Socket.IO |
 | **PLC Monitor** | Ladder rung diagram, input contact and output coil tables, scan-tick counter, alarm log |
 | **Maintenance Page** | Health trend, anomaly trend, full sensor status table and complete alarm history |
 | **Machine Controls** | Start / Stop / Emergency Stop / Reset E-Stop via REST API |
 | **Fault Injection** | Inject or clear artificial sensor faults for demo / testing |
 | **Alarm Management** | Per-sensor alarms with priority levels (critical / warning / info) and ACK support |
+| **Production Hardening** | API-key protection for mutating endpoints, `/health` + `/ready` + `/metrics`, Dockerfile and GitHub Actions CI |
 
 ## Tech Stack
 
 - **Backend** — Python 3.12, Flask 3, Flask-SocketIO (threading mode)
 - **ML** — scikit-learn `IsolationForest`, `MinMaxScaler`
+- **PLC Bridge** — `pymodbus` (optional; enabled via env vars)
 - **Frontend** — Bootstrap 5, Chart.js 4, Socket.IO client (all vendored, no CDN required)
 - **Transport** — WebSocket with HTTP polling fallback
 
@@ -36,7 +39,8 @@ SIAS is a full-stack web application that combines **PLC ladder logic simulation
 │   ├── models/
 │   │   ├── sensor.py       # Sensor simulator (6 sensors, fault injection)
 │   │   ├── plc.py          # PLC ladder-logic, alarm management
-│   │   └── predictor.py    # IsolationForest predictive maintenance engine
+│   │   ├── plc_adapter.py  # Simulation + Modbus PLC integration adapter
+│   │   └── predictor.py    # Predictive engine + model persistence + drift
 │   ├── templates/
 │   │   ├── base.html       # Shared navbar + script includes
 │   │   ├── index.html      # Landing page
@@ -66,12 +70,42 @@ python app.py
 open http://localhost:5000
 ```
 
+## Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `PLC_MODE` | `sim` | `sim` for software PLC, `modbus` for Modbus bridge |
+| `PLC_HOST` | `127.0.0.1` | Modbus PLC host |
+| `PLC_PORT` | `502` | Modbus PLC TCP port |
+| `PLC_UNIT_ID` | `1` | Modbus unit/slave id |
+| `PLC_COIL_MOTOR_RUN` | `0` | Modbus coil address for `motor_run` |
+| `PLC_COIL_PUMP_RUN` | `1` | Modbus coil address for `pump_run` |
+| `PLC_COIL_ALARM_HORN` | `2` | Modbus coil address for `alarm_horn` |
+| `PLC_COIL_ESTOP_LATCH` | `3` | Modbus coil address for `estop_latch` |
+| `PLC_COIL_PRESSURE_RELIEF` | `4` | Modbus coil address for `pressure_relief` |
+| `PLC_COIL_LUBE_PUMP` | `5` | Modbus coil address for `lube_pump` |
+| `SIAS_MODEL_PATH` | `instance/predictor_model.pkl` | Predictor checkpoint path |
+| `SIAS_API_TOKEN` | _(empty)_ | If set, required as `X-API-Key` for mutating `/api/*` requests |
+| `SIAS_UI_API_TOKEN` | _(empty)_ | Optional token injected into UI JavaScript for browser POST actions |
+
 ## Running Tests
 
 ```bash
-pip install pytest
 python -m pytest tests/ -v
 ```
+
+## Docker
+
+```bash
+docker build -t sias .
+docker run --rm -p 5000:5000 sias
+```
+
+## Ops Endpoints
+
+- `GET /health` - liveness
+- `GET /ready` - readiness + PLC/model readiness details (includes active `coil_map` in Modbus mode)
+- `GET /metrics` - basic request and uptime metrics
 
 ## Screenshots
 

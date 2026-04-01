@@ -259,13 +259,13 @@ function updateAlarmTable(activeAlarms) {
 // ---- Machine controls & fault injection ----------------------------------
 
 async function machineCmd(cmd) {
-  const res = await fetch(`/api/plc/${cmd}`, { method: 'POST' });
+  const res = await siasFetch(`/api/plc/${cmd}`, { method: 'POST' });
   const data = await res.json();
   console.log(cmd, data.message);
 }
 
 async function ackAlarm(id) {
-  await fetch('/api/plc/acknowledge-alarm', {
+  await siasFetch('/api/plc/acknowledge-alarm', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ alarm_id: id }),
@@ -274,7 +274,7 @@ async function ackAlarm(id) {
 
 async function injectFault() {
   const sensor = document.getElementById('fault-sensor').value;
-  await fetch('/api/fault/inject', {
+  await siasFetch('/api/fault/inject', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ sensor, magnitude: 3.0 }),
@@ -282,7 +282,7 @@ async function injectFault() {
 }
 
 async function clearFault() {
-  await fetch('/api/fault/clear', { method: 'POST' });
+  await siasFetch('/api/fault/clear', { method: 'POST' });
 }
 
 // ---- Socket.IO data handler ----------------------------------------------

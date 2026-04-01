@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="sias-api-token" content="{{ ui_api_token }}" />
   <title>{% block title %}Smart Industrial Automation System{% endblock %}</title>
 
   <!-- Bootstrap 5 (vendored) -->
@@ -65,6 +66,17 @@
 <script src="{{ url_for('static', filename='vendor/chart.umd.min.js') }}"></script>
 
 <script>
+  const SIAS_API_TOKEN = document.querySelector('meta[name="sias-api-token"]')?.content || '';
+
+  async function siasFetch(url, options = {}) {
+    const opts = { ...options };
+    opts.headers = opts.headers ? { ...opts.headers } : {};
+    if (SIAS_API_TOKEN) {
+      opts.headers['X-API-Key'] = SIAS_API_TOKEN;
+    }
+    return fetch(url, opts);
+  }
+
   // Clock
   function updateClock() {
     document.getElementById('clock').textContent = new Date().toLocaleTimeString();

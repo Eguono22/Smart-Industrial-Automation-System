@@ -173,7 +173,7 @@ function renderAlarmLog(alarmLog, activeAlarms) {
 // ---- Machine controls ----------------------------------------------------
 
 async function machineCmd(cmd) {
-  await fetch(`/api/plc/${cmd}`, { method: 'POST' });
+  await siasFetch(`/api/plc/${cmd}`, { method: 'POST' });
 }
 
 // ---- Socket.IO handler ---------------------------------------------------
