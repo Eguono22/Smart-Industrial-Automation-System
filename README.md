@@ -107,6 +107,16 @@ docker run --rm -p 5000:5000 sias
 - `GET /ready` - readiness + PLC/model readiness details (includes active `coil_map` in Modbus mode)
 - `GET /metrics` - basic request and uptime metrics
 
+## Smoke Test
+
+```powershell
+# GET checks only
+powershell -ExecutionPolicy Bypass -File scripts/smoke_test.ps1 -BaseUrl https://your-deployment-url
+
+# GET + POST checks (when SIAS_API_TOKEN is enabled)
+powershell -ExecutionPolicy Bypass -File scripts/smoke_test.ps1 -BaseUrl https://your-deployment-url -ApiToken "<token>"
+```
+
 ## Screenshots
 
 ### Home Page
