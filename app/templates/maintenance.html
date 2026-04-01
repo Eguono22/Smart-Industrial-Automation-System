@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}SIAS – Maintenance Log{% endblock %}
+
+{% block content %}
+<h5 class="mb-3"><i class="bi bi-tools me-1 text-warning"></i>Predictive Maintenance</h5>
+
+<!-- Health + RUL summary -->
+<div class="row g-3 mb-3">
+  <div class="col-md-4">
+    <div class="card bg-dark border-secondary p-3 text-center h-100">
+      <div class="small text-secondary mb-1"><i class="bi bi-heart-pulse me-1"></i>Machine Health Score</div>
+      <div id="maint-health" class="display-3 fw-bold text-success">—</div>
+      <div>
+        <div class="progress mt-2 bg-secondary" style="height:10px">
+          <div id="health-bar" class="progress-bar bg-success" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card bg-dark border-secondary p-3 text-center h-100">
+      <div class="small text-secondary mb-1"><i class="bi bi-clock-history me-1"></i>Estimated RUL</div>
+      <div id="maint-rul" class="display-3 fw-bold text-info">—</div>
+      <div class="small text-secondary mt-1">until next maintenance</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card bg-dark border-secondary p-3 h-100">
+      <div class="small text-secondary mb-1"><i class="bi bi-lightbulb me-1 text-info"></i>Recommendations</div>
+      <ul id="maint-recs" class="list-unstyled small mb-0" style="max-height:180px;overflow-y:auto"></ul>
+    </div>
+  </div>
+</div>
+
+<!-- Health trend chart -->
+<div class="row g-3 mb-3">
+  <div class="col-md-8">
+    <div class="card bg-dark border-secondary p-3">
+      <h6 class="mb-2"><i class="bi bi-graph-up me-1 text-success"></i>Health Score Trend</h6>
+      <canvas id="maintHealthChart" style="max-height:200px"></canvas>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card bg-dark border-secondary p-3">
+      <h6 class="mb-2"><i class="bi bi-shield-exclamation me-1 text-warning"></i>Anomaly Score Trend</h6>
+      <canvas id="maintAnomalyChart" style="max-height:200px"></canvas>
+      <div class="mt-2 text-center small">
+        Anomaly: <span id="maint-anomaly-badge" class="badge bg-success">Normal</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Sensor status summary -->
+<div class="row g-3 mb-3">
+  <div class="col-12">
+    <div class="card bg-dark border-secondary p-3">
+      <h6 class="mb-2"><i class="bi bi-table me-1 text-primary"></i>Sensor Status Summary</h6>
+      <div class="table-responsive">
+        <table class="table table-sm table-dark table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Sensor</th>
+              <th>Current Value</th>
+              <th>Unit</th>
+              <th>Status</th>
+              <th>Normal Range</th>
+              <th>Warning Range</th>
+            </tr>
+          </thead>
+          <tbody id="sensor-summary-tbody">
+            <tr><td colspan="6" class="text-secondary small">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Alarm History -->
+<div class="row g-3">
+  <div class="col-12">
+    <div class="card bg-dark border-secondary p-3">
+      <h6 class="mb-2"><i class="bi bi-bell-history me-1 text-danger"></i>Alarm History</h6>
+      <div id="alarm-history-wrapper" style="max-height:350px;overflow-y:auto">
+        <p class="text-secondary small">No alarm history yet</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/maintenance.js') }}"></script>
+{% endblock %}

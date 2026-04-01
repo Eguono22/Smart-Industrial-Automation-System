@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Smart Industrial Automation System{% endblock %}</title>
+
+  <!-- Bootstrap 5 (vendored) -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}" />
+  <!-- Bootstrap Icons (vendored) -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons.min.css') }}" />
+  <!-- App CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  {% block head %}{% endblock %}
+</head>
+<body class="bg-dark text-light">
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-black border-bottom border-secondary shadow-sm">
+  <div class="container-fluid px-3">
+    <a class="navbar-brand fw-bold" href="/">
+      <i class="bi bi-cpu-fill text-primary me-2"></i>SIAS
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navMenu">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item">
+          <a class="nav-link {% if request.path == '/dashboard' %}active{% endif %}" href="/dashboard">
+            <i class="bi bi-speedometer2 me-1"></i>Dashboard
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.path == '/plc-monitor' %}active{% endif %}" href="/plc-monitor">
+            <i class="bi bi-diagram-3 me-1"></i>PLC Monitor
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.path == '/maintenance' %}active{% endif %}" href="/maintenance">
+            <i class="bi bi-tools me-1"></i>Maintenance
+          </a>
+        </li>
+      </ul>
+      <div class="d-flex align-items-center gap-2 small">
+        <span id="connection-badge" class="badge bg-secondary">
+          <i class="bi bi-circle-fill me-1"></i>Connecting…
+        </span>
+        <span id="clock" class="text-secondary"></span>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- Page content -->
+<main class="container-fluid px-3 py-3">
+  {% block content %}{% endblock %}
+</main>
+
+<!-- Bootstrap JS (vendored) -->
+<script src="{{ url_for('static', filename='vendor/bootstrap.bundle.min.js') }}"></script>
+<!-- Socket.IO (vendored) -->
+<script src="{{ url_for('static', filename='vendor/socket.io.min.js') }}"></script>
+<!-- Chart.js (vendored) -->
+<script src="{{ url_for('static', filename='vendor/chart.umd.min.js') }}"></script>
+
+<script>
+  // Clock
+  function updateClock() {
+    document.getElementById('clock').textContent = new Date().toLocaleTimeString();
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // Global SocketIO connection
+  const socket = io({ transports: ['websocket', 'polling'] });
+  socket.on('connect', () => {
+    const b = document.getElementById('connection-badge');
+    b.className = 'badge bg-success';
+    b.innerHTML = '<i class="bi bi-circle-fill me-1"></i>Live';
+  });
+  socket.on('disconnect', () => {
+    const b = document.getElementById('connection-badge');
+    b.className = 'badge bg-danger';
+    b.innerHTML = '<i class="bi bi-circle-fill me-1"></i>Offline';
+  });
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

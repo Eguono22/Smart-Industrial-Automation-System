@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}SIAS – Dashboard{% endblock %}
+
+{% block content %}
+<!-- Top KPI row -->
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="card bg-dark border-secondary h-100 p-3 text-center">
+      <div class="small text-secondary mb-1"><i class="bi bi-heart-pulse me-1"></i>Health Score</div>
+      <div id="kpi-health" class="display-5 fw-bold text-success">—</div>
+      <div class="small text-secondary">/ 100</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card bg-dark border-secondary h-100 p-3 text-center">
+      <div class="small text-secondary mb-1"><i class="bi bi-clock-history me-1"></i>Est. RUL</div>
+      <div id="kpi-rul" class="display-5 fw-bold text-info">—</div>
+      <div class="small text-secondary">remaining</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card bg-dark border-secondary h-100 p-3 text-center">
+      <div class="small text-secondary mb-1"><i class="bi bi-exclamation-triangle me-1"></i>Active Alarms</div>
+      <div id="kpi-alarms" class="display-5 fw-bold text-warning">—</div>
+      <div class="small text-secondary">alarm(s)</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card bg-dark border-secondary h-100 p-3 text-center">
+      <div class="small text-secondary mb-1"><i class="bi bi-activity me-1"></i>Machine Status</div>
+      <div id="kpi-status" class="display-5 fw-bold">—</div>
+      <div class="small text-secondary">state</div>
+    </div>
+  </div>
+</div>
+
+<!-- Sensor gauges row -->
+<div class="row g-3 mb-3" id="sensor-cards">
+  {% set sensors = [
+    ('temperature','thermometer-half','Temperature','°C'),
+    ('pressure','speedometer','Pressure','bar'),
+    ('vibration','soundwave','Vibration','mm/s'),
+    ('current','lightning-charge','Current','A'),
+    ('rpm','arrow-repeat','RPM','RPM'),
+    ('oil_level','droplet-half','Oil Level','%')
+  ] %}
+  {% for key, icon, label, unit in sensors %}
+  <div class="col-6 col-md-4 col-lg-2">
+    <div class="card bg-dark border-secondary h-100 p-3 text-center sensor-card" id="card-{{key}}">
+      <i class="bi bi-{{icon}} fs-4 text-primary mb-1"></i>
+      <div class="small text-secondary">{{label}}</div>
+      <div class="fs-3 fw-bold" id="val-{{key}}">—</div>
+      <div class="small text-secondary">{{unit}}</div>
+      <span class="badge mt-1 w-100" id="badge-{{key}}">—</span>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Charts row -->
+<div class="row g-3 mb-3">
+  <div class="col-md-8">
+    <div class="card bg-dark border-secondary p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="mb-0"><i class="bi bi-graph-up me-1 text-primary"></i>Sensor Trends</h6>
+        <select class="form-select form-select-sm bg-dark text-light border-secondary" id="chart-sensor-select" style="width:160px">
+          <option value="temperature">Temperature</option>
+          <option value="pressure">Pressure</option>
+          <option value="vibration" selected>Vibration</option>
+          <option value="current">Current</option>
+          <option value="rpm">RPM</option>
+          <option value="oil_level">Oil Level</option>
+        </select>
+      </div>
+      <canvas id="sensorChart" style="max-height:220px"></canvas>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card bg-dark border-secondary p-3 h-100">
+      <h6 class="mb-2"><i class="bi bi-heart-pulse me-1 text-success"></i>Health History</h6>
+      <canvas id="healthChart" style="max-height:220px"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Anomaly score + Recommendations + Controls -->
+<div class="row g-3">
+  <div class="col-md-4">
+    <div class="card bg-dark border-secondary p-3 h-100">
+      <h6 class="mb-2"><i class="bi bi-shield-exclamation me-1 text-warning"></i>Anomaly Score</h6>
+      <canvas id="anomalyChart" style="max-height:180px"></canvas>
+      <div class="mt-2 small text-center">
+        <span id="anomaly-label" class="badge bg-success">Normal</span>
+        <span class="text-secondary ms-2">ML model:
+          <span id="model-status" class="text-warning">Training…</span>
+        </span>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card bg-dark border-secondary p-3 h-100">
+      <h6 class="mb-2"><i class="bi bi-lightbulb me-1 text-info"></i>Recommendations</h6>
+      <ul id="recommendations" class="list-unstyled small mb-0" style="max-height:200px;overflow-y:auto"></ul>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card bg-dark border-secondary p-3 h-100">
+      <h6 class="mb-2"><i class="bi bi-sliders me-1 text-primary"></i>Machine Controls</h6>
+      <div class="d-grid gap-2">
+        <button class="btn btn-success" onclick="machineCmd('start')">
+          <i class="bi bi-play-fill me-1"></i>Start Machine
+        </button>
+        <button class="btn btn-secondary" onclick="machineCmd('stop')">
+          <i class="bi bi-stop-fill me-1"></i>Stop Machine
+        </button>
+        <button class="btn btn-danger" onclick="machineCmd('estop')">
+          <i class="bi bi-x-octagon-fill me-1"></i>Emergency Stop
+        </button>
+        <button class="btn btn-outline-warning btn-sm" onclick="machineCmd('reset-estop')">
+          <i class="bi bi-arrow-counterclockwise me-1"></i>Reset E-Stop
+        </button>
+      </div>
+      <hr class="border-secondary my-2"/>
+      <h6 class="small text-secondary mb-1"><i class="bi bi-bug me-1"></i>Fault Injection (Demo)</h6>
+      <div class="input-group input-group-sm">
+        <select class="form-select bg-dark text-light border-secondary" id="fault-sensor">
+          <option value="temperature">Temperature</option>
+          <option value="pressure">Pressure</option>
+          <option value="vibration">Vibration</option>
+          <option value="current">Current</option>
+          <option value="rpm">RPM</option>
+        </select>
+        <button class="btn btn-outline-danger" onclick="injectFault()">Inject</button>
+        <button class="btn btn-outline-success" onclick="clearFault()">Clear</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Active Alarms -->
+<div class="row g-3 mt-1">
+  <div class="col-12">
+    <div class="card bg-dark border-secondary p-3">
+      <h6 class="mb-2"><i class="bi bi-bell me-1 text-warning"></i>Active Alarms</h6>
+      <div id="alarm-table-wrapper">
+        <p class="text-secondary small">No active alarms</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}
