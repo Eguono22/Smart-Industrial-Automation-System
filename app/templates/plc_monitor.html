@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}SIAS – PLC Monitor{% endblock %}
+
+{% block content %}
+<h5 class="mb-3"><i class="bi bi-diagram-3 me-1 text-info"></i>PLC Ladder Logic Monitor</h5>
+
+<div class="row g-3">
+  <!-- Contacts (Inputs) -->
+  <div class="col-md-4">
+    <div class="card bg-dark border-secondary p-3 h-100">
+      <h6 class="text-info mb-2"><i class="bi bi-arrow-right-circle me-1"></i>Input Contacts</h6>
+      <table class="table table-sm table-dark table-borderless mb-0">
+        <thead><tr><th>Address</th><th>Label</th><th>State</th></tr></thead>
+        <tbody id="contacts-tbody">
+          <tr><td colspan="3" class="text-secondary small">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Coils (Outputs) -->
+  <div class="col-md-4">
+    <div class="card bg-dark border-secondary p-3 h-100">
+      <h6 class="text-warning mb-2"><i class="bi bi-circle me-1"></i>Output Coils</h6>
+      <table class="table table-sm table-dark table-borderless mb-0">
+        <thead><tr><th>Address</th><th>Label</th><th>State</th></tr></thead>
+        <tbody id="coils-tbody">
+          <tr><td colspan="3" class="text-secondary small">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PLC Controls -->
+  <div class="col-md-4">
+    <div class="card bg-dark border-secondary p-3">
+      <h6 class="text-primary mb-2"><i class="bi bi-sliders me-1"></i>PLC Controls</h6>
+      <div class="d-grid gap-2 mb-3">
+        <button class="btn btn-success" onclick="machineCmd('start')">
+          <i class="bi bi-play-fill me-1"></i>Start (I0.0 Start PB)
+        </button>
+        <button class="btn btn-secondary" onclick="machineCmd('stop')">
+          <i class="bi bi-stop-fill me-1"></i>Stop (I0.1 Stop PB)
+        </button>
+        <button class="btn btn-danger" onclick="machineCmd('estop')">
+          <i class="bi bi-x-octagon-fill me-1"></i>E-Stop (I0.2)
+        </button>
+        <button class="btn btn-outline-warning btn-sm" onclick="machineCmd('reset-estop')">
+          <i class="bi bi-arrow-counterclockwise me-1"></i>Reset E-Stop
+        </button>
+      </div>
+      <hr class="border-secondary"/>
+      <div class="small text-secondary">
+        <div class="mb-1 fw-semibold text-light">Scan Cycle</div>
+        <div>Tick: <span id="plc-tick" class="text-info">—</span></div>
+        <div>Motor Run: <span id="motor-run-state" class="badge">—</span></div>
+        <div class="mt-1">Last update: <span id="plc-ts" class="text-secondary">—</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Ladder Logic Diagram -->
+<div class="row g-3 mt-1">
+  <div class="col-12">
+    <div class="card bg-dark border-secondary p-3">
+      <h6 class="mb-3"><i class="bi bi-layout-text-window me-1 text-primary"></i>Ladder Logic Rungs</h6>
+      <div id="ladder-diagram" class="font-monospace small"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Alarm Log -->
+<div class="row g-3 mt-1">
+  <div class="col-12">
+    <div class="card bg-dark border-secondary p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="mb-0"><i class="bi bi-journal-text me-1 text-warning"></i>Alarm Log</h6>
+        <span class="badge bg-secondary" id="alarm-count-badge">0 active</span>
+      </div>
+      <div id="alarm-log-wrapper" style="max-height:300px;overflow-y:auto">
+        <p class="text-secondary small">No alarms recorded</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/plc_monitor.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,87 @@
+/* ============================================================
+   Smart Industrial Automation System – Global Styles
+   ============================================================ */
+
+:root {
+  --bg-card: #1a1d23;
+  --border-color: #2e3240;
+  --text-muted-custom: #8892a4;
+  --accent-blue: #4f8ef7;
+  --accent-green: #28d17c;
+  --accent-yellow: #ffc107;
+  --accent-red: #e05252;
+}
+
+body {
+  background-color: #111317;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: #d0d8e8;
+}
+
+/* ---- Navbar ---- */
+.navbar-brand {
+  letter-spacing: 2px;
+  font-size: 1.1rem;
+}
+
+/* ---- Cards ---- */
+.card {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border-color) !important;
+  border-radius: 10px;
+}
+
+/* ---- Sensor cards ---- */
+.sensor-card.status-normal  { border-color: var(--accent-green) !important; }
+.sensor-card.status-warning { border-color: var(--accent-yellow) !important; }
+.sensor-card.status-critical { border-color: var(--accent-red) !important; animation: pulse-border 1s infinite; }
+
+@keyframes pulse-border {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(224, 82, 82, 0.0); }
+  50%       { box-shadow: 0 0 0 6px rgba(224, 82, 82, 0.35); }
+}
+
+/* ---- Badge colours ---- */
+.badge-normal   { background-color: var(--accent-green); color: #000; }
+.badge-warning  { background-color: var(--accent-yellow); color: #000; }
+.badge-critical { background-color: var(--accent-red); color: #fff; animation: pulse-bg 1s infinite; }
+
+@keyframes pulse-bg {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+/* ---- Tables ---- */
+.table-dark { background-color: transparent !important; }
+.table-dark th { color: var(--text-muted-custom); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* ---- Ladder logic diagram ---- */
+#ladder-diagram .rung {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: #0e1014;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+#ladder-diagram .rung-label {
+  color: var(--text-muted-custom);
+  font-size: 0.75rem;
+  min-width: 110px;
+}
+.contact-closed { color: var(--accent-green); }
+.contact-open   { color: #555; }
+.coil-on        { color: var(--accent-yellow); }
+.coil-off       { color: #555; }
+.rung-arrow     { color: var(--border-color); }
+
+/* ---- Progress bars ---- */
+.progress { border-radius: 4px; }
+
+/* ---- Scrollbars ---- */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #2e3240; border-radius: 3px; }

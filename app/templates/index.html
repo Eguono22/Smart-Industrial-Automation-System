@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}SIAS – Home{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center align-items-center" style="min-height:80vh">
+  <div class="col-md-8 text-center py-5">
+    <i class="bi bi-cpu-fill display-1 text-primary mb-3"></i>
+    <h1 class="display-4 fw-bold">Smart Industrial Automation System</h1>
+    <p class="lead text-secondary mt-3 mb-4">
+      Predictive Maintenance platform combining <strong>PLC ladder logic</strong>,
+      <strong>real-time sensor analytics</strong> and an <strong>ML anomaly detection engine</strong>
+      to keep your industrial machines running safely and efficiently.
+    </p>
+    <div class="row g-3 justify-content-center mt-2">
+      <div class="col-sm-4">
+        <a href="/dashboard" class="btn btn-primary btn-lg w-100 shadow">
+          <i class="bi bi-speedometer2 me-2"></i>Live Dashboard
+        </a>
+      </div>
+      <div class="col-sm-4">
+        <a href="/plc-monitor" class="btn btn-outline-info btn-lg w-100 shadow">
+          <i class="bi bi-diagram-3 me-2"></i>PLC Monitor
+        </a>
+      </div>
+      <div class="col-sm-4">
+        <a href="/maintenance" class="btn btn-outline-warning btn-lg w-100 shadow">
+          <i class="bi bi-tools me-2"></i>Maintenance Log
+        </a>
+      </div>
+    </div>
+
+    <div class="row g-4 mt-5 text-start">
+      <div class="col-md-4">
+        <div class="card bg-secondary bg-opacity-10 border-secondary h-100 p-3">
+          <h5 class="text-primary"><i class="bi bi-graph-up-arrow me-2"></i>Sensor Analytics</h5>
+          <p class="text-secondary small mb-0">Real-time monitoring of Temperature, Pressure, Vibration, Current, RPM and Oil Level with live trend charts.</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card bg-secondary bg-opacity-10 border-secondary h-100 p-3">
+          <h5 class="text-info"><i class="bi bi-diagram-3 me-2"></i>PLC Ladder Logic</h5>
+          <p class="text-secondary small mb-0">Simulated PLC with motor interlocks, emergency stop, pressure relief and alarm horn rungs updated every scan cycle.</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card bg-secondary bg-opacity-10 border-secondary h-100 p-3">
+          <h5 class="text-warning"><i class="bi bi-shield-exclamation me-2"></i>Predictive ML</h5>
+          <p class="text-secondary small mb-0">Isolation Forest anomaly detection calculates a health score and Remaining Useful Life (RUL) estimate in real time.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
