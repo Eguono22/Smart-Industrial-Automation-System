@@ -42,6 +42,11 @@ let currentAlarmFilter = 'all';
 let latestAlarmLog = [];
 let latestActiveAlarms = [];
 let ackAllInFlight = false;
+let monitorRefreshInFlight = false;
+
+const PLC_MONITOR_ENDPOINT = '/api/plc/monitor';
+const PLC_MONITOR_COMMAND_ENDPOINT = '/api/plc/monitor/command';
+const PLC_MONITOR_ACK_ENDPOINT = '/api/plc/monitor/acknowledge';
 
 // ---- Render ladder diagram -----------------------------------------------
 
@@ -209,12 +214,25 @@ function renderAlarmLog(alarmLog, activeAlarms) {
 // ---- Machine controls ----------------------------------------------------
 
 async function machineCmd(cmd) {
-  await siasFetch(`/api/plc/${cmd}`, { method: 'POST' });
+  try {
+    const res = await siasFetch(PLC_MONITOR_COMMAND_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: cmd }),
+    });
+    if (!res.ok) {
+      throw new Error(`Failed with status ${res.status}`);
+    }
+    await refreshMonitorFromApi({ silent: true });
+  } catch (err) {
+    console.error(err);
+    showToast(`Command failed: ${cmd}`, 'danger');
+  }
 }
 
 async function ackAlarm(id) {
   try {
-    const res = await siasFetch('/api/plc/acknowledge-alarm', {
+    const res = await siasFetch(PLC_MONITOR_ACK_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ alarm_id: id }),
@@ -225,6 +243,7 @@ async function ackAlarm(id) {
     const alarm = latestActiveAlarms.find((a) => a.id === id);
     if (alarm) alarm.acknowledged = true;
     renderAlarmLog(latestAlarmLog, latestActiveAlarms);
+    refreshMonitorFromApi({ silent: true });
     showToast(`Alarm ${id} acknowledged`, 'success');
   } catch (err) {
     console.error(err);
@@ -251,7 +270,7 @@ async function ackAllActiveAlarms() {
   const results = await Promise.all(
     targets.map(async (id) => {
       try {
-        const res = await siasFetch('/api/plc/acknowledge-alarm', {
+        const res = await siasFetch(PLC_MONITOR_ACK_ENDPOINT, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ alarm_id: id }),
@@ -271,6 +290,7 @@ async function ackAllActiveAlarms() {
     if (alarm) alarm.acknowledged = true;
   }
   renderAlarmLog(latestAlarmLog, latestActiveAlarms);
+  refreshMonitorFromApi({ silent: true });
   ackAllInFlight = false;
   updateAckAllButtonState(latestActiveAlarms);
 
@@ -347,10 +367,36 @@ function renderPlcData(plc) {
   document.getElementById('plc-ts').textContent = new Date().toLocaleTimeString();
 }
 
+async function refreshMonitorFromApi({ silent = false } = {}) {
+  if (monitorRefreshInFlight) return;
+  monitorRefreshInFlight = true;
+  try {
+    const res = await siasFetch(PLC_MONITOR_ENDPOINT, { cache: 'no-store' });
+    if (!res.ok) {
+      throw new Error(`Failed with status ${res.status}`);
+    }
+    const data = await res.json();
+    const plcData = data?.plc || data;
+    if (plcData?.coils && plcData?.contacts) {
+      renderPlcData(plcData);
+    }
+  } catch (err) {
+    console.error(err);
+    if (!silent) {
+      showToast('Unable to load PLC monitor data', 'danger');
+    }
+  } finally {
+    monitorRefreshInFlight = false;
+  }
+}
+
+function shouldUseHttpPolling() {
+  const badge = document.getElementById('connection-badge');
+  return !badge || !badge.textContent.includes('Live');
+}
+
 async function loadInitialPlcStatus() {
-  const res = await siasFetch('/api/plc/status');
-  const plc = await res.json();
-  renderPlcData(plc);
+  await refreshMonitorFromApi();
 }
 
 // ---- Socket.IO handler ---------------------------------------------------
@@ -364,3 +410,8 @@ socket.on('data_update', (payload) => {
 
 loadInitialPlcStatus();
 updateAlarmFilterButtons();
+setInterval(() => {
+  if (shouldUseHttpPolling()) {
+    refreshMonitorFromApi({ silent: true });
+  }
+}, 3000);

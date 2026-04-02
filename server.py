@@ -157,6 +157,8 @@ def metrics():
 # REST API
 # ---------------------------------------------------------------------------
 
+_PLC_MONITOR_COMMANDS = {"start", "stop", "estop", "reset-estop"}
+
 
 @app.route("/api/sensors")
 def api_sensors():
@@ -178,6 +180,58 @@ def api_plc_status():
     with _lock:
         status = plc.get_status()
     return jsonify(status)
+
+
+@app.route("/api/plc/monitor")
+def api_plc_monitor():
+    with _lock:
+        status = plc.get_status()
+    return jsonify(
+        {
+            "ok": True,
+            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "plc": status,
+        }
+    )
+
+
+@app.route("/api/plc/monitor/command", methods=["POST"])
+def api_plc_monitor_command():
+    data = request.get_json(silent=True) or {}
+    cmd = str(data.get("command", "")).strip().lower()
+    if cmd not in _PLC_MONITOR_COMMANDS:
+        return jsonify({"ok": False, "error": "invalid_command"}), 400
+
+    with _lock:
+        if cmd == "start":
+            plc.start_machine()
+            sensor_sim.set_machine_running(True)
+            msg = "Machine started"
+        elif cmd == "stop":
+            plc.stop_machine()
+            sensor_sim.set_machine_running(False)
+            msg = "Machine stopped"
+        elif cmd == "estop":
+            plc.emergency_stop()
+            sensor_sim.set_machine_running(False)
+            msg = "Emergency stop activated"
+        else:
+            plc.reset_estop()
+            msg = "E-Stop reset"
+
+    return jsonify({"ok": True, "command": cmd, "message": msg})
+
+
+@app.route("/api/plc/monitor/acknowledge", methods=["POST"])
+def api_plc_monitor_acknowledge():
+    data = request.get_json(silent=True) or {}
+    alarm_id = str(data.get("alarm_id", "")).strip()
+    if not alarm_id:
+        return jsonify({"ok": False, "error": "alarm_id_required"}), 400
+
+    with _lock:
+        plc.acknowledge_alarm(alarm_id)
+    return jsonify({"ok": True, "alarm_id": alarm_id})
 
 
 @app.route("/api/plc/start", methods=["POST"])
