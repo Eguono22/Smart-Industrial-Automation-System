@@ -84,6 +84,39 @@
   setInterval(updateClock, 1000);
   updateClock();
 
+  const connectionBadgeEl = document.getElementById('connection-badge');
+  let socketConnected = false;
+
+  function setConnectionBadge(mode) {
+    if (mode === 'live') {
+      connectionBadgeEl.className = 'badge bg-success';
+      connectionBadgeEl.innerHTML = '<i class="bi bi-circle-fill me-1"></i>Live';
+      return;
+    }
+    if (mode === 'http') {
+      connectionBadgeEl.className = 'badge bg-info text-dark';
+      connectionBadgeEl.innerHTML = '<i class="bi bi-circle-fill me-1"></i>HTTP';
+      return;
+    }
+    if (mode === 'retry') {
+      connectionBadgeEl.className = 'badge bg-warning text-dark';
+      connectionBadgeEl.innerHTML = '<i class="bi bi-circle-fill me-1"></i>Retrying…';
+      return;
+    }
+    connectionBadgeEl.className = 'badge bg-danger';
+    connectionBadgeEl.innerHTML = '<i class="bi bi-circle-fill me-1"></i>Offline';
+  }
+
+  async function probeHealth() {
+    if (socketConnected) return;
+    try {
+      const r = await fetch('/health', { cache: 'no-store' });
+      setConnectionBadge(r.ok ? 'http' : 'offline');
+    } catch (_) {
+      setConnectionBadge('offline');
+    }
+  }
+
   // Global SocketIO connection
   // Start with polling for fastest compatibility, then upgrade to websocket.
   const socket = io({
@@ -94,20 +127,22 @@
     reconnectionDelayMax: 3000,
   });
   socket.on('connect', () => {
-    const b = document.getElementById('connection-badge');
-    b.className = 'badge bg-success';
-    b.innerHTML = '<i class="bi bi-circle-fill me-1"></i>Live';
+    socketConnected = true;
+    setConnectionBadge('live');
   });
   socket.on('connect_error', () => {
-    const b = document.getElementById('connection-badge');
-    b.className = 'badge bg-warning text-dark';
-    b.innerHTML = '<i class="bi bi-circle-fill me-1"></i>Retrying…';
+    if (!socketConnected) {
+      setConnectionBadge('retry');
+    }
   });
   socket.on('disconnect', () => {
-    const b = document.getElementById('connection-badge');
-    b.className = 'badge bg-danger';
-    b.innerHTML = '<i class="bi bi-circle-fill me-1"></i>Offline';
+    socketConnected = false;
+    setConnectionBadge('offline');
+    probeHealth();
   });
+
+  probeHealth();
+  setInterval(probeHealth, 10000);
 </script>
 {% block scripts %}{% endblock %}
 </body>
