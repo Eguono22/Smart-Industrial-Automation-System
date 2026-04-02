@@ -85,11 +85,23 @@
   updateClock();
 
   // Global SocketIO connection
-  const socket = io({ transports: ['websocket', 'polling'] });
+  // Start with polling for fastest compatibility, then upgrade to websocket.
+  const socket = io({
+    transports: ['polling', 'websocket'],
+    timeout: 8000,
+    reconnection: true,
+    reconnectionDelay: 500,
+    reconnectionDelayMax: 3000,
+  });
   socket.on('connect', () => {
     const b = document.getElementById('connection-badge');
     b.className = 'badge bg-success';
     b.innerHTML = '<i class="bi bi-circle-fill me-1"></i>Live';
+  });
+  socket.on('connect_error', () => {
+    const b = document.getElementById('connection-badge');
+    b.className = 'badge bg-warning text-dark';
+    b.innerHTML = '<i class="bi bi-circle-fill me-1"></i>Retrying…';
   });
   socket.on('disconnect', () => {
     const b = document.getElementById('connection-badge');
