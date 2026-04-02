@@ -38,6 +38,11 @@ const RUNGS = [
   },
 ];
 
+let currentAlarmFilter = 'all';
+let latestAlarmLog = [];
+let latestActiveAlarms = [];
+let ackAllInFlight = false;
+
 // ---- Render ladder diagram -----------------------------------------------
 
 function renderLadder(plcData) {
@@ -148,26 +153,57 @@ function renderAlarmLog(alarmLog, activeAlarms) {
   badge.textContent = `${activeAlarms.length} active`;
   badge.className   = `badge ${activeAlarms.length > 0 ? 'bg-danger' : 'bg-secondary'}`;
 
+  const activeById = {};
+  for (const alarm of activeAlarms) {
+    activeById[alarm.id] = alarm;
+  }
+
   const wrapper = document.getElementById('alarm-log-wrapper');
   if (!alarmLog.length) {
     wrapper.innerHTML = '<p class="text-secondary small">No alarms recorded</p>';
+    updateAckAllButtonState(activeAlarms);
     return;
   }
   let html = `<table class="table table-sm table-dark table-hover mb-0">
-    <thead><tr><th>Time</th><th>ID</th><th>Message</th><th>Priority</th><th>Status</th></tr></thead><tbody>`;
-  for (const a of alarmLog) {
+    <thead><tr><th>Time</th><th>ID</th><th>Message</th><th>Priority</th><th>Status</th><th>Ack</th></tr></thead><tbody>`;
+  const shownAckActionFor = new Set();
+  const filteredAlarmLog = alarmLog.filter((a) => {
+    const isActive = !!activeById[a.id];
+    if (currentAlarmFilter === 'active') return isActive;
+    if (currentAlarmFilter === 'resolved') return !isActive;
+    return true;
+  });
+
+  if (!filteredAlarmLog.length) {
+    wrapper.innerHTML = '<p class="text-secondary small mb-0">No alarms for selected filter</p>';
+    updateAckAllButtonState(activeAlarms);
+    return;
+  }
+
+  for (const a of filteredAlarmLog) {
+    const active = activeById[a.id];
+    const acknowledged = active ? active.acknowledged : true;
     const sc = a.priority_label === 'critical' ? 'danger' : a.priority_label === 'warning' ? 'warning' : 'info';
-    const state = a.active ? '<span class="badge bg-danger">ACTIVE</span>' : '<span class="badge bg-secondary">RESOLVED</span>';
+    const state = active
+      ? `<span class="badge ${acknowledged ? 'bg-warning text-dark' : 'bg-danger'}">${acknowledged ? 'ACTIVE (ACK)' : 'ACTIVE'}</span>`
+      : '<span class="badge bg-secondary">RESOLVED</span>';
+    let ackControl = '<span class="text-secondary small">—</span>';
+    if (active && !acknowledged && !shownAckActionFor.has(a.id)) {
+      shownAckActionFor.add(a.id);
+      ackControl = `<button class="btn btn-outline-secondary btn-sm py-0 px-1" onclick="ackAlarm('${a.id}')">ACK</button>`;
+    }
     html += `<tr>
       <td class="text-secondary small">${a.timestamp.slice(0,19).replace('T',' ')}</td>
       <td>${a.id}</td>
       <td>${a.message}</td>
       <td><span class="badge bg-${sc}">${(a.priority_label||'info').toUpperCase()}</span></td>
       <td>${state}</td>
+      <td>${ackControl}</td>
     </tr>`;
   }
   html += '</tbody></table>';
   wrapper.innerHTML = html;
+  updateAckAllButtonState(activeAlarms);
 }
 
 // ---- Machine controls ----------------------------------------------------
@@ -176,14 +212,130 @@ async function machineCmd(cmd) {
   await siasFetch(`/api/plc/${cmd}`, { method: 'POST' });
 }
 
-// ---- Socket.IO handler ---------------------------------------------------
+async function ackAlarm(id) {
+  try {
+    const res = await siasFetch('/api/plc/acknowledge-alarm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ alarm_id: id }),
+    });
+    if (!res.ok) {
+      throw new Error(`Failed with status ${res.status}`);
+    }
+    const alarm = latestActiveAlarms.find((a) => a.id === id);
+    if (alarm) alarm.acknowledged = true;
+    renderAlarmLog(latestAlarmLog, latestActiveAlarms);
+    showToast(`Alarm ${id} acknowledged`, 'success');
+  } catch (err) {
+    console.error(err);
+    showToast(`Unable to acknowledge ${id}`, 'danger');
+  }
+}
 
-socket.on('data_update', (payload) => {
-  const { plc } = payload;
+function setAlarmFilter(filter) {
+  currentAlarmFilter = filter;
+  updateAlarmFilterButtons();
+  renderAlarmLog(latestAlarmLog, latestActiveAlarms);
+}
+
+async function ackAllActiveAlarms() {
+  if (ackAllInFlight) return;
+  const targets = latestActiveAlarms.filter((a) => !a.acknowledged).map((a) => a.id);
+  if (!targets.length) {
+    showToast('No unacknowledged active alarms', 'info');
+    return;
+  }
+
+  ackAllInFlight = true;
+  updateAckAllButtonState(latestActiveAlarms);
+  const results = await Promise.all(
+    targets.map(async (id) => {
+      try {
+        const res = await siasFetch('/api/plc/acknowledge-alarm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ alarm_id: id }),
+        });
+        return { id, ok: res.ok };
+      } catch (err) {
+        console.error(err);
+        return { id, ok: false };
+      }
+    })
+  );
+
+  const successIds = results.filter((r) => r.ok).map((r) => r.id);
+  const failedCount = results.length - successIds.length;
+  for (const id of successIds) {
+    const alarm = latestActiveAlarms.find((a) => a.id === id);
+    if (alarm) alarm.acknowledged = true;
+  }
+  renderAlarmLog(latestAlarmLog, latestActiveAlarms);
+  ackAllInFlight = false;
+  updateAckAllButtonState(latestActiveAlarms);
+
+  if (failedCount === 0) {
+    showToast(`Acknowledged ${successIds.length} active alarm(s)`, 'success');
+  } else if (successIds.length > 0) {
+    showToast(`Acknowledged ${successIds.length}, failed ${failedCount}`, 'warning');
+  } else {
+    showToast('Failed to acknowledge active alarms', 'danger');
+  }
+}
+
+function updateAlarmFilterButtons() {
+  const ids = ['all', 'active', 'resolved'];
+  for (const id of ids) {
+    const btn = document.getElementById(`alarm-filter-${id}`);
+    if (!btn) continue;
+    btn.classList.toggle('active', currentAlarmFilter === id);
+  }
+}
+
+function updateAckAllButtonState(activeAlarms) {
+  const btn = document.getElementById('ack-all-btn');
+  if (!btn) return;
+  const hasUnack = activeAlarms.some((a) => !a.acknowledged);
+  btn.disabled = ackAllInFlight || !hasUnack;
+}
+
+function showToast(message, level = 'success') {
+  const container = document.getElementById('plc-toast-container');
+  if (!container || !window.bootstrap) return;
+
+  const tone = {
+    success: 'text-bg-success',
+    danger: 'text-bg-danger',
+    warning: 'text-bg-warning text-dark',
+    info: 'text-bg-info text-dark',
+  }[level] || 'text-bg-secondary';
+  const closeClass = (level === 'warning' || level === 'info') ? 'btn-close' : 'btn-close btn-close-white';
+
+  const toast = document.createElement('div');
+  toast.className = `toast align-items-center border-0 ${tone}`;
+  toast.setAttribute('role', 'alert');
+  toast.setAttribute('aria-live', 'assertive');
+  toast.setAttribute('aria-atomic', 'true');
+  toast.innerHTML = `
+    <div class="d-flex">
+      <div class="toast-body">${message}</div>
+      <button type="button" class="${closeClass} me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  `;
+  container.appendChild(toast);
+  const bsToast = new bootstrap.Toast(toast, { delay: 2600 });
+  toast.addEventListener('hidden.bs.toast', () => toast.remove());
+  bsToast.show();
+}
+
+function renderPlcData(plc) {
+  latestAlarmLog = plc.alarm_log || [];
+  latestActiveAlarms = plc.active_alarms || [];
+
   renderContacts(plc.contacts);
   renderCoils(plc.coils);
   renderLadder(plc);
-  renderAlarmLog(plc.alarm_log, plc.active_alarms);
+  renderAlarmLog(latestAlarmLog, latestActiveAlarms);
 
   document.getElementById('plc-tick').textContent = plc.tick;
   const mr = plc.coils.motor_run;
@@ -193,4 +345,22 @@ socket.on('data_update', (payload) => {
     el.textContent = mr.state ? 'ON' : 'OFF';
   }
   document.getElementById('plc-ts').textContent = new Date().toLocaleTimeString();
+}
+
+async function loadInitialPlcStatus() {
+  const res = await siasFetch('/api/plc/status');
+  const plc = await res.json();
+  renderPlcData(plc);
+}
+
+// ---- Socket.IO handler ---------------------------------------------------
+
+socket.on('data_update', (payload) => {
+  const plc = payload?.plc;
+  if (plc) {
+    renderPlcData(plc);
+  }
 });
+
+loadInitialPlcStatus();
+updateAlarmFilterButtons();

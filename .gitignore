@@ -25,3 +25,7 @@ Thumbs.db
 *.log
 instance/
 .env
+
+# Local automation artifacts/evidence
+artifacts/
+docs/evidence/
