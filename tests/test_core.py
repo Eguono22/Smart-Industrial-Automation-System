@@ -84,6 +84,41 @@ class TestSensorSimulator:
         for k in SENSORS:
             assert sim._drift[k] == 0.0
 
+    def test_demo_status_starts_inactive(self):
+        sim = SensorSimulator()
+        status = sim.get_demo_status()
+        assert status["active"] is False
+        assert status["scenario"] == "bearing_overheat"
+        assert status["progress_percent"] == 0.0
+
+    def test_demo_progresses_to_critical_faults_deterministically(self):
+        sim = SensorSimulator()
+        sim.start_demo()
+
+        first = sim.read()
+        assert first["vibration"]["status"] == "normal"
+        assert first["temperature"]["status"] == "normal"
+
+        data = first
+        for _ in range(35):
+            data = sim.read()
+
+        assert data["vibration"]["status"] == "critical"
+        assert data["temperature"]["status"] == "critical"
+        assert data["current"]["status"] == "critical"
+        assert sim.get_demo_status()["active"] is True
+
+    def test_stop_demo_returns_to_baseline(self):
+        sim = SensorSimulator()
+        sim.start_demo()
+        for _ in range(35):
+            sim.read()
+        sim.stop_demo()
+        data = sim.read()
+        assert sim.get_demo_status()["active"] is False
+        assert data["vibration"]["status"] == "normal"
+        assert data["temperature"]["status"] == "normal"
+
 
 class TestClassify:
 
@@ -223,6 +258,23 @@ class TestPLCController:
         plc.update(sd)
         plc.update(sd)
         assert plc.get_status()["tick"] == 2
+
+    def test_demo_critical_fault_trips_motor_interlock(self):
+        sim = SensorSimulator()
+        plc = PLCController()
+        sim.start_demo()
+        plc.start_machine()
+
+        status = {}
+        for _ in range(38):
+            sd = sim.read()
+            plc.update(sd)
+            status = plc.get_status()
+
+        assert status["contacts"]["temp_sw"]["state"] is False
+        assert status["contacts"]["motor_overload"]["state"] is False
+        assert status["coils"]["motor_run"]["state"] is False
+        assert status["coils"]["alarm_horn"]["state"] is True
 
 
 # ==========================================================================

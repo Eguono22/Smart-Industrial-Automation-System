@@ -54,11 +54,13 @@ def _background_update():
             plc.update(sd)
             prediction = predictor.update(sd)
             plc_status = plc.get_status()
+            demo_status = sensor_sim.get_demo_status()
 
         payload = {
             "sensors": sd,
             "plc": plc_status,
             "prediction": prediction,
+            "demo": demo_status,
         }
         socketio.emit("data_update", payload)
 
@@ -310,8 +312,39 @@ def api_inject_fault():
 @app.route("/api/fault/clear", methods=["POST"])
 def api_clear_fault():
     with _lock:
-        sensor_sim.clear_fault()
+        sensor_sim.stop_demo()
     return jsonify({"ok": True})
+
+
+@app.route("/api/demo/status")
+def api_demo_status():
+    with _lock:
+        status = sensor_sim.get_demo_status()
+    return jsonify({"ok": True, "demo": status})
+
+
+@app.route("/api/demo/start", methods=["POST"])
+def api_demo_start():
+    with _lock:
+        sensor_sim.start_demo()
+        plc.reset_estop()
+        plc.start_machine()
+        sensor_sim.set_machine_running(True)
+        plc.update(sensor_sim.read())
+        status = sensor_sim.get_demo_status()
+    return jsonify({"ok": True, "message": "Deterministic demo started", "demo": status})
+
+
+@app.route("/api/demo/stop", methods=["POST"])
+def api_demo_stop():
+    with _lock:
+        sensor_sim.stop_demo()
+        plc.reset_estop()
+        plc.start_machine()
+        sensor_sim.set_machine_running(True)
+        plc.update(sensor_sim.read())
+        status = sensor_sim.get_demo_status()
+    return jsonify({"ok": True, "message": "Deterministic demo stopped", "demo": status})
 
 
 # ---------------------------------------------------------------------------
@@ -324,4 +357,5 @@ def on_connect():
         sd = sensor_sim.read()
         plc_status = plc.get_status()
         prediction = predictor.update(sd)
-    emit("data_update", {"sensors": sd, "plc": plc_status, "prediction": prediction})
+        demo_status = sensor_sim.get_demo_status()
+    emit("data_update", {"sensors": sd, "plc": plc_status, "prediction": prediction, "demo": demo_status})

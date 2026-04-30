@@ -1,5 +1,7 @@
 # Python
 __pycache__/
+.pytest_cache/
+.uv-cache/
 *.pyc
 *.pyo
 *.pyd
@@ -29,3 +31,4 @@ instance/
 # Local automation artifacts/evidence
 artifacts/
 docs/evidence/
+.run/

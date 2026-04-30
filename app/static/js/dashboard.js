@@ -256,6 +256,26 @@ function updateAlarmTable(activeAlarms) {
   wrapper.innerHTML = html;
 }
 
+function updateDemoStatus(demo) {
+  if (!demo) return;
+  const phaseEl = document.getElementById('demo-phase');
+  const progressEl = document.getElementById('demo-progress');
+  const progressLabelEl = document.getElementById('demo-progress-label');
+  const startBtn = document.getElementById('demo-start-btn');
+  const stopBtn = document.getElementById('demo-stop-btn');
+  if (!phaseEl || !progressEl || !progressLabelEl) return;
+
+  const progress = demo.active ? demo.progress_percent : 0;
+  phaseEl.textContent = demo.active ? demo.phase : 'Idle';
+  phaseEl.className = demo.active ? 'text-info fw-semibold' : 'text-secondary';
+  progressLabelEl.textContent = `${progress.toFixed(0)}%`;
+  progressEl.style.width = `${progress}%`;
+  progressEl.className = `progress-bar ${demo.active ? 'bg-info' : 'bg-secondary'}`;
+
+  if (startBtn) startBtn.disabled = demo.active;
+  if (stopBtn) stopBtn.disabled = !demo.active;
+}
+
 // ---- Machine controls & fault injection ----------------------------------
 
 async function machineCmd(cmd) {
@@ -285,10 +305,22 @@ async function clearFault() {
   await siasFetch('/api/fault/clear', { method: 'POST' });
 }
 
+async function startDemo() {
+  const res = await siasFetch('/api/demo/start', { method: 'POST' });
+  const data = await res.json();
+  updateDemoStatus(data.demo);
+}
+
+async function stopDemo() {
+  const res = await siasFetch('/api/demo/stop', { method: 'POST' });
+  const data = await res.json();
+  updateDemoStatus(data.demo);
+}
+
 // ---- Socket.IO data handler ----------------------------------------------
 
 socket.on('data_update', (payload) => {
-  const { sensors, plc, prediction } = payload;
+  const { sensors, plc, prediction, demo } = payload;
   const ts = new Date().toLocaleTimeString();
 
   updateSensorCards(sensors);
@@ -296,6 +328,7 @@ socket.on('data_update', (payload) => {
   updateRecommendations(prediction.recommendations);
   updateAnomalyBadge(prediction);
   updateAlarmTable(plc.active_alarms);
+  updateDemoStatus(demo);
 
   updateSensorChart(ts, sensors);
   updateHealthChart(ts, prediction.health_score);
@@ -322,3 +355,4 @@ document.getElementById('chart-sensor-select').addEventListener('change', (e) =>
 buildSensorChart();
 buildHealthChart();
 buildAnomalyChart();
+updateDemoStatus({ active: false, progress_percent: 0, phase: 'Idle' });

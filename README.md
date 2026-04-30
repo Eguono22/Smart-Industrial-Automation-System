@@ -19,6 +19,7 @@ SIAS is a full-stack web application that combines **PLC ladder logic simulation
 | **Maintenance Page** | Health trend, anomaly trend, full sensor status table and complete alarm history |
 | **Machine Controls** | Start / Stop / Emergency Stop / Reset E-Stop via REST API |
 | **Fault Injection** | Inject or clear artificial sensor faults for demo / testing |
+| **Deterministic Demo Scenario** | Repeatable bearing-overheat sequence: vibration warning, critical fault, thermal trip, PLC safety response |
 | **Alarm Management** | Per-sensor alarms with priority levels (critical / warning / info) and ACK support |
 | **Production Hardening** | API-key protection for mutating endpoints, `/health` + `/ready` + `/metrics`, Dockerfile and GitHub Actions CI |
 
@@ -93,6 +94,36 @@ open http://localhost:5000
 ```bash
 python -m pytest tests/ -v
 ```
+
+## Deterministic Demo
+
+Use the **Scenario Demo** controls on the dashboard, or call the API directly:
+
+```bash
+curl -X POST http://localhost:5000/api/demo/start
+curl http://localhost:5000/api/demo/status
+curl -X POST http://localhost:5000/api/demo/stop
+```
+
+Run the automated demo validation:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/demo_validation.ps1 -BaseUrl http://localhost:5000
+```
+
+The built-in `bearing_overheat` scenario is designed for walkthroughs and validation:
+
+| Phase | Expected behavior |
+|---|---|
+| Healthy baseline | Sensors remain normal and motor runs |
+| Early bearing wear | Vibration enters warning range |
+| Bearing fault | Vibration becomes critical and alarms are raised |
+| Thermal runaway | Temperature/current become critical and PLC interlocks de-energise motor run |
+| PLC safety response | Pressure relief energises and alarm horn remains active until ACK |
+
+This gives a repeatable end-to-end maintenance story: normal operation, early warning, predicted risk, PLC safety action and operator alarm handling.
+
+See [docs/demo_walkthrough.md](docs/demo_walkthrough.md) for a presentation-ready walkthrough.
 
 ## Docker
 

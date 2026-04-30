@@ -67,6 +67,42 @@ SENSORS = {
 
 HISTORY_SIZE = 300  # data-points kept in rolling buffer
 
+DEMO_SCENARIO = "bearing_overheat"
+DEMO_PHASES = [
+    {
+        "name": "Healthy baseline",
+        "duration": 6,
+        "description": "Normal operating envelope before the fault begins.",
+        "targets": {},
+    },
+    {
+        "name": "Early bearing wear",
+        "duration": 9,
+        "description": "Vibration crosses warning limits while other sensors remain near normal.",
+        "targets": {"vibration": 3.1, "temperature": 78.0, "current": 11.7},
+    },
+    {
+        "name": "Bearing fault",
+        "duration": 10,
+        "description": "Vibration becomes critical and heat begins to build.",
+        "targets": {"vibration": 4.8, "temperature": 88.0, "current": 13.2},
+    },
+    {
+        "name": "Thermal runaway",
+        "duration": 10,
+        "description": "Temperature and current trip safety interlocks.",
+        "targets": {"vibration": 5.8, "temperature": 99.0, "current": 16.2, "pressure": 4.6},
+    },
+    {
+        "name": "PLC safety response",
+        "duration": 8,
+        "description": "Critical pressure opens relief and the motor should remain de-energised.",
+        "targets": {"vibration": 6.2, "temperature": 103.0, "current": 16.8, "pressure": 5.4},
+    },
+]
+
+_DEMO_TOTAL_STEPS = sum(phase["duration"] for phase in DEMO_PHASES)
+
 
 class SensorSimulator:
     """Simulates all machine sensors and maintains a rolling history."""
@@ -79,6 +115,8 @@ class SensorSimulator:
         self._fault_sensor = None
         self._machine_running = True
         self._tick = 0
+        self._demo_active = False
+        self._demo_step = 0
         # Seed the history with a few normal readings so charts render
         # immediately on startup.
         for _ in range(30):
@@ -95,6 +133,7 @@ class SensorSimulator:
         if self._machine_running:
             self._tick += 1
             self._update_values()
+            self._apply_demo_values()
             self._record_history()
         return self._snapshot()
 
@@ -123,6 +162,33 @@ class SensorSimulator:
 
     def set_machine_running(self, running: bool):
         self._machine_running = running
+
+    def start_demo(self):
+        """Start the deterministic bearing-overheat demo scenario."""
+        self.clear_fault()
+        self._demo_active = True
+        self._demo_step = 0
+        self._tick = 0
+        self._values = {k: cfg["baseline"] for k, cfg in SENSORS.items()}
+
+    def stop_demo(self):
+        """Stop the deterministic demo and return sensors to normal baseline."""
+        self._demo_active = False
+        self._demo_step = 0
+        self.clear_fault()
+        self._values = {k: cfg["baseline"] for k, cfg in SENSORS.items()}
+
+    def get_demo_status(self) -> dict:
+        phase = self._demo_phase()
+        return {
+            "active": self._demo_active,
+            "scenario": DEMO_SCENARIO,
+            "step": self._demo_step,
+            "total_steps": _DEMO_TOTAL_STEPS,
+            "progress_percent": round(min(100.0, (self._demo_step / _DEMO_TOTAL_STEPS) * 100), 1),
+            "phase": phase["name"],
+            "description": phase["description"],
+        }
 
     @property
     def machine_running(self) -> bool:
@@ -156,6 +222,45 @@ class SensorSimulator:
                     self._values[name] = cfg["baseline"]
 
             self._values[name] = round(new_val, 2)
+
+    def _apply_demo_values(self):
+        if not self._demo_active:
+            return
+
+        phase_index, phase_start, phase = self._demo_phase_info()
+        previous_targets = {}
+        for earlier in DEMO_PHASES[:phase_index]:
+            previous_targets.update(earlier["targets"])
+
+        duration = max(1, phase["duration"])
+        phase_offset = min(duration, self._demo_step - phase_start + 1)
+        ratio = phase_offset / duration
+
+        values = {k: cfg["baseline"] for k, cfg in SENSORS.items()}
+        for sensor, start_value in previous_targets.items():
+            values[sensor] = start_value
+        for sensor, target in phase["targets"].items():
+            start_value = values.get(sensor, SENSORS[sensor]["baseline"])
+            values[sensor] = start_value + ((target - start_value) * ratio)
+
+        for sensor, value in values.items():
+            self._values[sensor] = round(value, 2)
+
+        if self._demo_step < _DEMO_TOTAL_STEPS:
+            self._demo_step += 1
+
+    def _demo_phase(self) -> dict:
+        return self._demo_phase_info()[2]
+
+    def _demo_phase_info(self) -> tuple[int, int, dict]:
+        cursor = 0
+        step = min(self._demo_step, _DEMO_TOTAL_STEPS - 1)
+        for index, phase in enumerate(DEMO_PHASES):
+            next_cursor = cursor + phase["duration"]
+            if step < next_cursor:
+                return index, cursor, phase
+            cursor = next_cursor
+        return len(DEMO_PHASES) - 1, cursor - DEMO_PHASES[-1]["duration"], DEMO_PHASES[-1]
 
     def _record_history(self):
         ts = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
