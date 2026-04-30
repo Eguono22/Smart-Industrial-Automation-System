@@ -24,3 +24,20 @@ jobs:
       - name: Run tests
         run: |
           python -m pytest tests/ -v
+
+      - name: Run deterministic demo validation
+        shell: bash
+        run: |
+          python app.py > server.log 2>&1 &
+          server_pid=$!
+          trap "kill $server_pid 2>/dev/null || true" EXIT
+
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:5000/health; then
+              break
+            fi
+            sleep 1
+          done
+
+          curl -fsS http://127.0.0.1:5000/health
+          pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/demo_validation.ps1 -BaseUrl http://127.0.0.1:5000
