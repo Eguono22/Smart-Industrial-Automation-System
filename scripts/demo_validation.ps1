@@ -8,6 +8,8 @@ param(
 
     [int]$PollSeconds = 2,
 
+    [string]$ReportPath = "",
+
     [switch]$LeaveRunning
 )
 
@@ -51,17 +53,76 @@ function Mark-PassOnce {
     param(
         [hashtable]$State,
         [string]$Key,
-        [string]$Message
+        [string]$Message,
+        [System.Collections.Generic.List[object]]$Events
     )
     if (-not $State[$Key]) {
         $State[$Key] = $true
         Write-Host "[PASS] $Message"
+        Add-ReportEvent -Events $Events -Type "pass" -Message $Message -Data @{ check = $Key }
     }
+}
+
+function Add-ReportEvent {
+    param(
+        [System.Collections.Generic.List[object]]$Events,
+        [string]$Type,
+        [string]$Message,
+        [hashtable]$Data = @{}
+    )
+    $Events.Add([ordered]@{
+        timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+        type = $Type
+        message = $Message
+        data = $Data
+    }) | Out-Null
+}
+
+function Write-ValidationReport {
+    param(
+        [string]$Path,
+        [bool]$Succeeded,
+        [string]$Root,
+        [datetime]$StartedAt,
+        [hashtable]$Checks,
+        [System.Collections.Generic.List[object]]$Events,
+        [object]$FinalSnapshot,
+        [string]$FailureMessage
+    )
+    if (-not $Path) {
+        return
+    }
+
+    $finishedAt = Get-Date
+    $reportDir = Split-Path -Parent $Path
+    if ($reportDir) {
+        New-Item -ItemType Directory -Force -Path $reportDir | Out-Null
+    }
+
+    $report = [ordered]@{
+        ok = $Succeeded
+        base_url = $Root
+        started_at = $StartedAt.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+        finished_at = $finishedAt.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+        duration_seconds = [math]::Round(($finishedAt - $StartedAt).TotalSeconds, 2)
+        checks = $Checks
+        final_snapshot = $FinalSnapshot
+        events = @($Events)
+        failure = $FailureMessage
+    }
+
+    $report | ConvertTo-Json -Depth 12 | Set-Content -Path $Path -Encoding UTF8
+    Write-Host "[INFO] Validation report written to $Path"
 }
 
 $root = $BaseUrl.TrimEnd("/")
 $headers = New-SiasHeaders
 $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+$startedAt = Get-Date
+$events = [System.Collections.Generic.List[object]]::new()
+$finalSnapshot = $null
+$validationSucceeded = $false
+$failureMessage = ""
 $checks = @{
     baseline = $false
     vibrationWarning = $false
@@ -72,6 +133,7 @@ $checks = @{
 }
 
 Write-Host "Running SIAS deterministic demo validation against: $root"
+Add-ReportEvent -Events $events -Type "start" -Message "Started deterministic demo validation" -Data @{ base_url = $root }
 
 try {
     $health = Invoke-SiasGet -Url "$root/health" -Headers @{}
@@ -80,10 +142,12 @@ try {
         throw "Unexpected health status: $($health.status)"
     }
     Write-Host "[PASS] Health endpoint is healthy"
+    Add-ReportEvent -Events $events -Type "pass" -Message "Health endpoint is healthy" -Data @{ status = $health.status }
 
     $start = Invoke-SiasPost -Url "$root/api/demo/start" -Headers $headers
     Assert-Ok -Response $start -Name "/api/demo/start"
     Write-Host "[PASS] Demo scenario started: $($start.demo.scenario)"
+    Add-ReportEvent -Events $events -Type "pass" -Message "Demo scenario started" -Data @{ scenario = $start.demo.scenario }
 
     while ((Get-Date) -lt $deadline) {
         $demo = Invoke-SiasGet -Url "$root/api/demo/status" -Headers @{}
@@ -103,28 +167,52 @@ try {
             $sensors.current.status,
             $plc.coils.motor_run.state)
 
+        $finalSnapshot = [ordered]@{
+            demo = $demo.demo
+            sensors = [ordered]@{
+                vibration = $sensors.vibration
+                temperature = $sensors.temperature
+                current = $sensors.current
+                pressure = $sensors.pressure
+            }
+            plc = [ordered]@{
+                motor_run = $plc.coils.motor_run
+                pressure_relief = $plc.coils.pressure_relief
+                alarm_horn = $plc.coils.alarm_horn
+                temp_sw = $plc.contacts.temp_sw
+                motor_overload = $plc.contacts.motor_overload
+                active_alarm_count = $plc.active_alarms.Count
+            }
+            prediction = [ordered]@{
+                health_score = $prediction.health_score
+                anomaly_score = $prediction.anomaly_score
+                rul_label = $prediction.rul_label
+                model_trained = $prediction.model_trained
+            }
+        }
+
         if ($demo.demo.active -and $sensors.vibration.status -eq "normal" -and $plc.coils.motor_run.state) {
-            Mark-PassOnce -State $checks -Key "baseline" -Message "Healthy baseline observed with motor running"
+            Mark-PassOnce -State $checks -Key "baseline" -Message "Healthy baseline observed with motor running" -Events $events
         }
 
         if ($sensors.vibration.status -eq "warning") {
-            Mark-PassOnce -State $checks -Key "vibrationWarning" -Message "Early bearing wear creates vibration warning"
+            Mark-PassOnce -State $checks -Key "vibrationWarning" -Message "Early bearing wear creates vibration warning" -Events $events
         }
 
         if ($sensors.vibration.status -eq "critical") {
-            Mark-PassOnce -State $checks -Key "vibrationCritical" -Message "Bearing fault creates critical vibration alarm"
+            Mark-PassOnce -State $checks -Key "vibrationCritical" -Message "Bearing fault creates critical vibration alarm" -Events $events
         }
 
         if ($sensors.temperature.status -eq "critical" -or $sensors.current.status -eq "critical") {
-            Mark-PassOnce -State $checks -Key "thermalTrip" -Message "Thermal/current trip condition observed"
+            Mark-PassOnce -State $checks -Key "thermalTrip" -Message "Thermal/current trip condition observed" -Events $events
         }
 
         if (-not $plc.coils.motor_run.state -and (-not $plc.contacts.temp_sw.state -or -not $plc.contacts.motor_overload.state)) {
-            Mark-PassOnce -State $checks -Key "plcInterlock" -Message "PLC interlock de-energised motor run"
+            Mark-PassOnce -State $checks -Key "plcInterlock" -Message "PLC interlock de-energised motor run" -Events $events
         }
 
         if ($plc.coils.pressure_relief.state) {
-            Mark-PassOnce -State $checks -Key "pressureRelief" -Message "Pressure relief output energised"
+            Mark-PassOnce -State $checks -Key "pressureRelief" -Message "Pressure relief output energised" -Events $events
         }
 
         if ($prediction.health_score -lt 70) {
@@ -134,14 +222,23 @@ try {
         $missing = @($checks.Keys | Where-Object { -not $checks[$_] })
         if ($missing.Count -eq 0) {
             Write-Host "Demo validation completed successfully."
-            return
+            Add-ReportEvent -Events $events -Type "success" -Message "Demo validation completed successfully"
+            $validationSucceeded = $true
+            break
         }
 
         Start-Sleep -Seconds $PollSeconds
     }
 
-    $remaining = @($checks.Keys | Where-Object { -not $checks[$_] })
-    throw "Demo validation timed out. Missing checks: $($remaining -join ', ')"
+    if (-not $validationSucceeded) {
+        $remaining = @($checks.Keys | Where-Object { -not $checks[$_] })
+        throw "Demo validation timed out. Missing checks: $($remaining -join ', ')"
+    }
+}
+catch {
+    $failureMessage = $_.Exception.Message
+    Add-ReportEvent -Events $events -Type "failure" -Message $failureMessage
+    throw
 }
 finally {
     if (-not $LeaveRunning) {
@@ -153,4 +250,13 @@ finally {
             Write-Host "[WARN] Unable to stop demo scenario: $($_.Exception.Message)"
         }
     }
+    Write-ValidationReport `
+        -Path $ReportPath `
+        -Succeeded $validationSucceeded `
+        -Root $root `
+        -StartedAt $startedAt `
+        -Checks $checks `
+        -Events $events `
+        -FinalSnapshot $finalSnapshot `
+        -FailureMessage $failureMessage
 }

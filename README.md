@@ -111,6 +111,12 @@ Run the automated demo validation:
 powershell -ExecutionPolicy Bypass -File scripts/demo_validation.ps1 -BaseUrl http://localhost:5000
 ```
 
+To save a portable evidence report:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/demo_validation.ps1 -BaseUrl http://localhost:5000 -ReportPath artifacts/demo-validation.json
+```
+
 The built-in `bearing_overheat` scenario is designed for walkthroughs and validation:
 
 | Phase | Expected behavior |

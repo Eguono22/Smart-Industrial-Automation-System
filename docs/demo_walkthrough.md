@@ -45,6 +45,12 @@ Run the proof script against a local or deployed URL:
 powershell -ExecutionPolicy Bypass -File scripts/demo_validation.ps1 -BaseUrl http://localhost:5000
 ```
 
+To write a JSON evidence report:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/demo_validation.ps1 -BaseUrl http://localhost:5000 -ReportPath artifacts/demo-validation.json
+```
+
 For protected deployments:
 
 ```powershell

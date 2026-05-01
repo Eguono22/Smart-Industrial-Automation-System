@@ -28,6 +28,7 @@ jobs:
       - name: Run deterministic demo validation
         shell: bash
         run: |
+          mkdir -p artifacts
           python app.py > server.log 2>&1 &
           server_pid=$!
           trap "kill $server_pid 2>/dev/null || true" EXIT
@@ -40,4 +41,13 @@ jobs:
           done
 
           curl -fsS http://127.0.0.1:5000/health
-          pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/demo_validation.ps1 -BaseUrl http://127.0.0.1:5000
+          pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/demo_validation.ps1 -BaseUrl http://127.0.0.1:5000 -ReportPath artifacts/demo-validation.json
+
+      - name: Upload validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sias-validation-evidence
+          path: |
+            artifacts/demo-validation.json
+            server.log
