@@ -474,3 +474,16 @@ asset with no history to another customer revokes its old credential. Assets wit
 maintenance or telemetry history cannot move between customers; telemetry history
 and configured credentials also prevent accidental asset deletion. These readings
 do not feed the demo ML model, create safety alarms or drive PLC outputs.
+
+
+## Founder profile
+
+The public `/founder` page introduces Eguonoroghene Adomi, Founder & Lead
+Developer of SIAS Hub, using the biography, education, industrial background,
+mission and expertise supplied by the founder. It is linked from the home page,
+navigation and shared footer and includes profile metadata for sharing.
+Profile data lives in `app/founder.py`; the biography and page layout are in
+`app/templates/founder.html`. Collaboration links lead to the existing solution
+planner and the supplied SIAS Hub website; no unimplemented contact route is linked.
+The shared footer displays `© 2026 SIAS Hub. All rights reserved.`, scoped to
+SIAS Hub-owned material, while preserving third-party copyright notices and licenses.

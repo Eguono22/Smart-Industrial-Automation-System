@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
   {% block head %}{% endblock %}
 </head>
-<body class="bg-dark text-light">
+<body class="bg-dark text-light d-flex flex-column min-vh-100">
 
 <!-- Navbar -->
 <nav class="navbar navbar-expand-lg navbar-dark bg-black border-bottom border-secondary shadow-sm">
@@ -29,6 +29,7 @@
     </button>
     <div class="collapse navbar-collapse" id="navMenu">
       <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link {% if request.path == '/founder' %}active{% endif %}" href="/founder">Founder</a></li>
         {% if current_user %}<li class="nav-item"><a class="nav-link {% if request.path == '/telemetry' %}active{% endif %}" href="/telemetry">Equipment data</a></li>{% endif %}
         {% if current_user %}<li class="nav-item"><a class="nav-link {% if request.path == '/notifications' %}active{% endif %}" href="/notifications">Notifications</a></li>{% endif %}
         <li class="nav-item"><a class="nav-link {% if request.path == '/work-orders' %}active{% endif %}" href="/work-orders">Work orders</a></li>
@@ -68,9 +69,17 @@
 </nav>
 
 <!-- Page content -->
-<main class="container-fluid px-3 py-3">
+<main class="container-fluid px-3 py-3 flex-grow-1">
   {% block content %}{% endblock %}
 </main>
+
+<footer class="border-top border-secondary mt-4 py-4">
+  <div class="container small">
+    <p class="mb-1">© 2026 SIAS Hub. All rights reserved.</p>
+    <p class="mb-1">Founded by <a href="/founder" class="link-info">Eguonoroghene Adomi</a></p>
+    <p class="text-secondary mb-0">This notice applies to material owned by SIAS Hub. Third-party material retains its respective copyright notices and licenses.</p>
+  </div>
+</footer>
 
 <!-- Bootstrap JS (vendored) -->
 <script src="{{ url_for('static', filename='vendor/bootstrap.bundle.min.js') }}"></script>

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Founder | SIAS Hub{% endblock %}
+{% block head %}
+<meta name="description" content="Meet Eguonoroghene Adomi, Founder and Lead Developer of SIAS Hub, an intelligent industrial automation and monitoring platform.">
+<meta property="og:title" content="Eguonoroghene Adomi | Founder of SIAS Hub">
+<meta property="og:description" content="Building the future of intelligent industrial automation, smart manufacturing, and connected industrial systems.">
+<meta property="og:url" content="https://siashub.com/founder">
+<meta property="og:type" content="profile">
+<link rel="canonical" href="https://siashub.com/founder">
+{% endblock %}
+{% block content %}
+<div class="founder-page">
+  <section class="founder-hero rounded-4 mb-5">
+    <div class="container py-5">
+      <div class="row align-items-center g-5 py-lg-4">
+        <div class="col-lg-7">
+          <span class="badge rounded-pill border border-info text-info mb-4">Meet the Founder</span>
+          <h1 class="display-4 fw-bold">Eguonoroghene <span class="text-info d-block">Adomi</span></h1>
+          <p class="fs-4 fw-semibold mt-4 mb-1">{{ founder.role }}</p>
+          <p class="text-info fs-5">{{ founder.company }} — {{ founder.full_company_name }}</p>
+          <p class="lead text-secondary mt-4">Cloud &amp; DevOps Engineer, industrial technology innovator, and software developer passionate about connecting industrial machinery with intelligent digital systems.</p>
+          <div class="d-flex flex-wrap gap-3 mt-4"><a href="#about" class="btn btn-info px-4">Discover My Story</a><a href="#contact" class="btn btn-outline-light px-4">Work With Me</a></div>
+          <p class="small text-secondary mt-4">Based in the Netherlands · Global Vision</p>
+        </div>
+        <div class="col-lg-5">
+          <aside class="card bg-dark border-info rounded-4 p-4 shadow" aria-label="Founder identity">
+            <div class="founder-identity rounded-4 text-center p-4">
+              <div class="founder-monogram mx-auto mb-4" aria-hidden="true">EA</div>
+              <p class="h4">{{ founder.name }}</p><p class="text-info mb-0">Founder | SIAS Hub</p>
+            </div>
+            <div class="row g-3 mt-2"><div class="col-sm-6"><p class="small text-secondary mb-1">Focus</p><strong>Industrial Automation</strong></div><div class="col-sm-6"><p class="small text-secondary mb-1">Expertise</p><strong>Cloud &amp; DevOps</strong></div></div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  </section>
+  <div class="container">
+    <section id="about" class="py-4 mb-5" aria-labelledby="about-heading">
+      <p class="small text-info">MY BACKGROUND</p><h2 id="about-heading">About the Founder</h2>
+      <p class="text-secondary mb-4">Combining industrial experience, engineering knowledge, and modern cloud technologies.</p>
+      <div class="row g-4">
+        <div class="col-lg-8 founder-prose">
+          <p><strong>{{ founder.name }}</strong> is the Founder and Lead Developer of <strong class="text-info">SIAS Hub (Smart Industrial Automation System)</strong>, a technology project dedicated to advancing industrial automation, intelligent machine monitoring, and digital transformation.</p>
+          <p>He holds a Bachelor's degree in Industrial Mathematics and a Master's degree in Computer Engineering, specializing in Computer Systems and Networks.</p>
+          <p>His professional background combines Cloud Engineering, DevOps, industrial manufacturing, infrastructure automation, and software development. His technical experience includes Microsoft Azure, AWS, Terraform, Docker, Kubernetes, Python, and CI/CD technologies.</p>
+          <p>Through firsthand experience with industrial production equipment, including extrusion and laminating coating systems, he recognized opportunities to improve operational visibility, machine performance monitoring, fault detection, and maintenance processes.</p>
+          <p>These experiences inspired the creation of SIAS Hub: a project designed to explore how industrial equipment, cloud computing, and intelligent software can work together to support smarter manufacturing.</p>
+        </div>
+        <div class="col-lg-4"><aside class="card bg-dark border-secondary p-4"><h3 class="h5">Founder Profile</h3><dl class="mb-0">
+          {% for label, value in [('Name', founder.name), ('Position', founder.role), ('Organization', founder.company), ('Location', founder.location), ('Field', 'Industrial Technology'), ('Specialization', 'Cloud, DevOps & Automation')] %}
+          <dt class="small text-secondary mt-3">{{ label }}</dt><dd class="mb-0">{{ value }}</dd>
+          {% endfor %}
+        </dl></aside></div>
+      </div>
+    </section>
+    <section class="founder-panel rounded-4 p-4 p-lg-5 mb-5" aria-labelledby="vision-heading">
+      <p class="small text-info">THE BIGGER PICTURE</p><h2 id="vision-heading">The Vision Behind SIAS Hub</h2>
+      <p class="fs-4 mt-4">To bridge the gap between traditional industrial machinery and modern intelligent technologies, creating a future where manufacturing systems are more connected, efficient, reliable, and data-driven.</p>
+      <p class="text-secondary mb-0">SIAS Hub aims to develop industrial monitoring and automation solutions that help organizations gain better visibility into their equipment, identify operational abnormalities, analyze production data, and make informed maintenance decisions.</p>
+    </section>
+    <section class="mb-5" aria-labelledby="focus-heading"><p class="small text-info">TECHNOLOGY &amp; INNOVATION</p><h2 id="focus-heading">Areas of Focus</h2><p class="text-secondary mb-4">The technologies and industrial challenges driving the development of SIAS Hub.</p>
+      <div class="row g-3">{% for area in founder.focus_areas %}<div class="col-md-6 col-lg-4"><article class="card bg-dark border-secondary h-100 p-4"><span class="text-info small fw-bold">{{ area.number }}</span><h3 class="h5 mt-3">{{ area.title }}</h3><p class="text-secondary mb-0">{{ area.description }}</p></article></div>{% endfor %}</div>
+    </section>
+    <section class="founder-panel rounded-4 p-4 p-lg-5 mb-5" aria-labelledby="expertise-heading"><p class="small text-info">ENGINEERING BACKGROUND</p><h2 id="expertise-heading" class="mb-4">Technical Expertise</h2><ul class="list-unstyled d-flex flex-wrap gap-2 mb-0">{% for skill in founder.expertise %}<li class="border border-info rounded-pill px-3 py-2 text-info">{{ skill }}</li>{% endfor %}</ul></section>
+    <section class="mb-5" aria-labelledby="values-heading"><p class="small text-info">WHAT DRIVES THE PROJECT</p><h2 id="values-heading" class="mb-4">Core Principles</h2><div class="row g-3">{% for value in founder['values'] %}<div class="col-sm-6 col-lg-3"><article class="card bg-dark border-secondary h-100 p-4"><h3 class="h5">{{ value.title }}</h3><p class="text-secondary mb-0">{{ value.description }}</p></article></div>{% endfor %}</div></section>
+    <section class="founder-hero rounded-4 text-center p-4 p-lg-5 mb-5" aria-labelledby="mission-heading"><h2 id="mission-heading" class="h6 text-info mb-4">FOUNDER’S MISSION</h2><figure class="mb-0"><blockquote class="fs-4 founder-prose">“{{ founder.mission }}”</blockquote><figcaption class="mt-4">{{ founder.name }}<span class="d-block text-info mt-1">{{ founder.role }}, SIAS Hub</span></figcaption></figure></section>
+    <section id="contact" class="card bg-dark border-info rounded-4 text-center p-4 p-lg-5 mb-5" aria-labelledby="collaboration-heading"><p class="small text-info">LET’S BUILD THE FUTURE</p><h2 id="collaboration-heading">Interested in Collaborating?</h2><p class="text-secondary mt-3 mx-auto founder-collaboration">SIAS Hub welcomes opportunities for industrial pilot projects, technology partnerships, research, software development, and smart manufacturing innovation.</p><div class="d-flex flex-wrap gap-3 justify-content-center mt-3"><a href="/#planner" class="btn btn-info px-4">Explore a SIAS Hub solution</a><a href="{{ founder.website }}" class="btn btn-outline-light px-4">Visit Website</a></div></section>
+  </div>
+</div>
+{% endblock %}

@@ -49,6 +49,19 @@ class ServerAccessTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         return response.get_json()['csrf_token']
 
+    def test_founder_profile_is_public_and_uses_shared_footer(self):
+        response = self.client.get('/founder')
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn('Eguonoroghene Adomi', html)
+        self.assertIn("Bachelor's degree in Industrial Mathematics", html)
+        self.assertIn('property="og:type" content="profile"', html)
+        self.assertEqual(html.count('<footer'), 1)
+        self.assertIn('© 2026 SIAS Hub. All rights reserved.', html)
+        self.assertIn('Third-party material retains', html)
+        self.assertNotIn('href="/contact"', html)
+        self.assertIn('Discover the founder', self.client.get('/').get_data(as_text=True))
+
     def test_shared_machine_endpoints_require_admin(self):
         self.assertEqual(self.client.get('/api/sensors').status_code, 401)
         self.login('viewer')
