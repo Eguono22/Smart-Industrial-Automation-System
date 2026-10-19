@@ -19,6 +19,26 @@
     <div class="col-sm-4"><div class="card p-3 bg-dark border-secondary"><strong class="fs-3">{{ capabilities|length }}</strong><span>Available and planned capabilities</span></div></div>
     <div class="col-sm-4"><div class="card p-3 bg-dark border-secondary"><strong class="fs-3">{{ capabilities|selectattr('status', 'equalto', 'Available')|list|length }}</strong><span>Available capabilities</span></div></div>
   </div>
+  <section id="screenshots" aria-labelledby="screenshots-heading" class="mb-5">
+    <h2 id="screenshots-heading">Explore the SIAS demo</h2>
+    <p class="text-secondary">Screenshots from the <a href="https://github.com/Eguono22/Smart-Industrial-Automation-System#screenshots" target="_blank" rel="noopener noreferrer">project README</a> show the original monitoring and maintenance demo. Select an image to view it full size.</p>
+    <div class="row g-4">
+      {% for title, url, description in [
+        ('Live Dashboard', 'https://github.com/user-attachments/assets/0b82aacf-f743-40b7-873f-22ccf555a423', 'View the demo’s sensor readings, machine health and live trends.'),
+        ('PLC Monitor', 'https://github.com/user-attachments/assets/5601468b-c275-4848-8fb1-0ecb2a1a2525', 'Explore the demo’s PLC logic, machine inputs and outputs.'),
+        ('Predictive Maintenance', 'https://github.com/user-attachments/assets/4597d352-a2fb-44a2-b62d-497352930518', 'Review the demo’s machine health, sensor status and maintenance history.')
+      ] %}
+      <div class="col-md-6 col-xl-4">
+        <figure class="card h-100 overflow-hidden mb-0">
+          <a href="{{ url }}" target="_blank" rel="noopener noreferrer" aria-label="Open full-size {{ title }} screenshot">
+            <img src="{{ url }}" alt="{{ title }} screenshot from the SIAS repository README" class="screenshot-image" loading="lazy" decoding="async">
+          </a>
+          <figcaption class="p-3"><h3 class="h5">{{ title }}</h3><p class="small text-secondary mb-0">{{ description }}</p></figcaption>
+        </figure>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
   <section aria-labelledby="industries-heading" class="mb-5">
     <h2 id="industries-heading">Find your industry and customers</h2>
     <label for="industry-search" class="form-label">Search industries, customer types, equipment or KPIs</label>

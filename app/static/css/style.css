@@ -145,3 +145,15 @@ body.sias-light {
 @media (max-width: 575px) {
   .sias-light header { padding: 1.25rem !important; }
 }
+
+/* Repository screenshots: preserve complete frames and open full-size on selection. */
+.screenshot-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  object-fit: contain;
+  background: #eaf0f7;
+  border-bottom: 1px solid var(--border-color);
+}
+#screenshots a:focus-visible { outline: 3px solid #1d4ed8; outline-offset: -3px; }
