@@ -6,8 +6,13 @@
     <span class="badge bg-primary mb-3">SIAS HUB · INDUSTRIES & SOLUTIONS</span>
     <h1 class="display-5 fw-bold">Connect your assets.<br>Plan smarter operations.</h1>
     <p class="lead text-secondary col-lg-9">Explore industry use cases, identify potential customer segments and build a solution plan around monitoring, maintenance and automation.</p>
+    {% if operations_enabled is not defined or operations_enabled %}
     <div class="d-flex flex-wrap gap-2"><a class="btn btn-primary" href="/assets">Manage customers &amp; assets</a><a class="btn btn-outline-primary" href="/dashboard">Open live demo</a><a class="btn btn-outline-info" href="/plc-monitor">PLC monitor</a><a class="btn btn-outline-warning" href="/maintenance">Maintenance</a><a class="btn btn-outline-light" href="#planner">Build a solution plan</a></div>
     <p class="small text-secondary mt-3">The live demo monitors one simulated machine. Industry profiles describe potential applications, not deployed solutions or existing customers.</p>
+    {% else %}
+    <div class="d-flex flex-wrap gap-2"><a class="btn btn-primary" href="#planner">Build a solution plan</a><a class="btn btn-outline-info" href="/founder">Meet the founder</a>{% if operations_url %}<a href="{{ operations_url }}" class="btn btn-outline-light">Open operations workspace</a>{% endif %}</div>
+    <p class="small text-secondary mt-3">Explore the platform’s capabilities and potential applications. Industry profiles describe use cases, not existing customers. Operational features are accessed through a separately hosted workspace.</p>
+    {% endif %}
   </header>
   <section class="card bg-dark border-secondary p-4 mb-5" aria-labelledby="founder-intro-heading">
     <p class="small text-info mb-2">MEET THE FOUNDER</p>

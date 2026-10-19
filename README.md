@@ -487,3 +487,25 @@ Profile data lives in `app/founder.py`; the biography and page layout are in
 planner and the supplied SIAS Hub website; no unimplemented contact route is linked.
 The shared footer displays `© 2026 SIAS Hub. All rights reserved.`, scoped to
 SIAS Hub-owned material, while preserving third-party copyright notices and licenses.
+
+## Vercel deployment scope
+
+`vercel.json` deploys `public_site.py`, a stateless public entrypoint for the
+industry hub, browser-local solution planner and founder biography. It does not
+open SQLite, start the simulator, initialize user accounts or run background
+workers. `.python-version` pins the Vercel runtime to Python 3.12.
+
+The full operations application remains available through `python app.py` or the
+Dockerfile on hosting with a durable writable database volume. Vercel's local
+filesystem does not provide durable shared SQLite storage; do not point the
+operations database at `/tmp` to simulate persistence. Public-site requests cannot
+create users, assets or equipment records. Operational links are hidden unless
+`SIAS_OPERATIONS_URL` is configured with the HTTPS URL of a separately hosted
+workspace. Existing operational bookmarks display a workspace information page.
+
+The Vercel team requires verified Git commits. Keep that setting enabled and
+publish through verified commits (for example GitHub's signed commit-authoring
+API or an appropriately configured local signing key). Plain unsigned `git commit`
+followed by `git push` is rejected by this team's automatic deployment policy.
+Check the Vercel deployment status and live `/health` and `/founder` after each
+release; a successful Git push alone does not establish deployment success.

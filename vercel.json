@@ -2,14 +2,22 @@
   "version": 2,
   "builds": [
     {
-      "src": "server.py",
-      "use": "@vercel/python"
+      "src": "public_site.py",
+      "use": "@vercel/python",
+      "config": {
+        "includeFiles": [
+          "app/templates/**",
+          "app/static/**",
+          "app/founder.py",
+          "app/models/hub.py"
+        ]
+      }
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "server.py"
+      "dest": "public_site.py"
     }
   ]
 }

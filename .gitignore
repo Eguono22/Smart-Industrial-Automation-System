@@ -32,3 +32,6 @@ instance/
 artifacts/
 docs/evidence/
 .run/
+
+# Vercel local metadata and environment downloads
+.vercel/
