@@ -16,23 +16,36 @@ def store():
 
 
 def public_user(row):
-    return {key: row[key] for key in ('id', 'username', 'name', 'role', 'customer_id', 'active')}
+    return {key: row[key] for key in ('id', 'username', 'name', 'role', 'customer_id', 'active', 'email')}
 
 
 def create_user(registry, data, record_id=None):
-    if not isinstance(data, dict) or set(data) - {'username', 'name', 'password', 'role', 'customer_id', 'active'}:
+    if not isinstance(data, dict) or set(data) - {'username', 'name', 'password', 'role', 'customer_id', 'active', 'email'}:
         raise RegistryError('Invalid account fields')
     with registry.connect() as db:
         db.execute('BEGIN IMMEDIATE')
         old = db.execute('SELECT * FROM users WHERE id=?', (record_id,)).fetchone() if record_id else None
         if record_id and old is None:
             raise RegistryError('Account not found', 404)
-        values = dict(old) if old else {'active': True, 'customer_id': None}
+        values = dict(old) if old else {'active': True, 'customer_id': None, 'email': ''}
         values.update(data)
         for field in ('username', 'name', 'role'):
             if not isinstance(values.get(field), str) or not values[field].strip() or len(values[field]) > 200:
                 raise RegistryError(f'{field} is required and must be at most 200 characters')
             values[field] = values[field].strip()
+        email = values.get('email', '')
+        from email.headerregistry import Address
+        try:
+            if not isinstance(email, str) or len(email) > 254 or any(ch in email for ch in '\r\n'):
+                raise ValueError()
+            email = email.strip()
+            if email:
+                parsed = Address(addr_spec=email)
+                if not parsed.username or not parsed.domain or parsed.addr_spec != email:
+                    raise ValueError()
+        except (ValueError, IndexError):
+            raise RegistryError('Provide a valid email address or leave it blank') from None
+        values['email'] = email
         values['username'] = values['username'].lower()
         if values['role'] not in ROLES or type(values['active']) not in (bool, int) or values['active'] not in (0, 1):
             raise RegistryError('Invalid role or active setting')
@@ -54,12 +67,12 @@ def create_user(registry, data, record_id=None):
         duplicate = db.execute('SELECT id FROM users WHERE username=? AND id != ?', (values['username'], record_id or 0)).fetchone()
         if duplicate:
             raise RegistryError('Username already exists', 409)
-        fields = ('username', 'name', 'password_hash', 'role', 'customer_id', 'active')
+        fields = ('username', 'name', 'password_hash', 'role', 'customer_id', 'active', 'email')
         if old:
             db.execute(f"UPDATE users SET {', '.join(f'{key}=?' for key in fields)} WHERE id=?", (*[values[key] for key in fields], record_id))
             db.execute('DELETE FROM auth_sessions WHERE user_id=?', (record_id,))
         else:
-            record_id = db.execute(f"INSERT INTO users ({', '.join(fields)}) VALUES (?, ?, ?, ?, ?, ?)", tuple(values[key] for key in fields)).lastrowid
+            record_id = db.execute(f"INSERT INTO users ({', '.join(fields)}) VALUES (?, ?, ?, ?, ?, ?, ?)", tuple(values[key] for key in fields)).lastrowid
         return public_user(db.execute('SELECT * FROM users WHERE id=?', (record_id,)).fetchone())
 
 
@@ -95,7 +108,7 @@ def install_auth(app):
                 if request.path.startswith(('/api/', '/socket.io/')) or request.path == '/metrics':
                     return jsonify(ok=False, error='Login required'), 401
                 return redirect('/login')
-            tenant_routes = request.path in ('/assets', '/work-orders') or request.path.startswith(('/api/registry', '/api/work-orders', '/api/auth'))
+            tenant_routes = request.path in ('/assets', '/work-orders', '/notifications') or request.path.startswith(('/api/registry', '/api/work-orders', '/api/auth', '/api/notifications'))
             if not tenant_routes and g.user['role'] != 'admin':
                 return jsonify(ok=False, error='Administrator access required'), 403
         if request.method in ('POST', 'PATCH', 'PUT', 'DELETE'):

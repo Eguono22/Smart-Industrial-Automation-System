@@ -29,6 +29,7 @@
     </button>
     <div class="collapse navbar-collapse" id="navMenu">
       <ul class="navbar-nav me-auto">
+        {% if current_user %}<li class="nav-item"><a class="nav-link {% if request.path == '/notifications' %}active{% endif %}" href="/notifications">Notifications</a></li>{% endif %}
         <li class="nav-item"><a class="nav-link {% if request.path == '/work-orders' %}active{% endif %}" href="/work-orders">Work orders</a></li>
         <li class="nav-item"><a class="nav-link {% if request.path == '/assets' %}active{% endif %}" href="/assets">Assets</a></li>
         <li class="nav-item"><a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">Industry Hub</a></li>

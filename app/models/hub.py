@@ -19,7 +19,7 @@ CAPABILITIES = [
         ("inventory", "Inventory and logistics", "Planned", "Material levels, stock movements, warehouse assets and replenishment."),
         ("security", "Enterprise access and audit", "Planned", "Expanded enterprise controls, SSO and organization-wide audit reporting. Local account roles, customer access and task history are available."),
         ("connectivity", "Industrial connectivity", "Planned", "OPC UA, MQTT, BACnet and historian connectors with edge buffering."),
-        ("reporting", "Reports and notifications", "Planned", "Scheduled reports, escalation rules and external notification delivery."),
+        ("reporting", "Reports and notifications", "Planned", "Scheduled reports and configurable escalation rules. Assignment and overdue emails are available through the SMTP worker."),
     ]
 ]
 

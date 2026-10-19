@@ -14,6 +14,7 @@ from flask_socketio import SocketIO, emit
 
 from app.asset_routes import assets_bp
 from app.auth import install_auth, authenticated_user
+from app.notifications import notifications_bp
 from app.models.hub import CAPABILITIES, INDUSTRIES
 from app.models.sensor import SensorSimulator
 from app.models.plc_adapter import build_plc_adapter
@@ -26,6 +27,7 @@ app = Flask(__name__, template_folder="app/templates", static_folder="app/static
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "sias-dev-secret")
 app.config["SIAS_DATABASE_PATH"] = os.environ.get("SIAS_DATABASE_PATH", os.path.join(app.instance_path, "sias.sqlite3"))
 app.register_blueprint(assets_bp)
+app.register_blueprint(notifications_bp)
 app.config["SESSION_COOKIE_SECURE"] = os.environ.get("SIAS_COOKIE_SECURE", "0") == "1"
 install_auth(app)
 socketio = SocketIO(app, async_mode="threading")

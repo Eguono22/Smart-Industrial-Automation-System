@@ -10,6 +10,7 @@
     <input name="id" type="hidden">
     <label for="user-username" class="form-label">Username</label><input id="user-username" name="username" class="form-control mb-2" required maxlength="200" autocomplete="off">
     <label for="user-name" class="form-label">Display name</label><input id="user-name" name="name" class="form-control mb-2" required maxlength="200">
+    <label for="user-email" class="form-label">Email for maintenance alerts (optional)</label><input id="user-email" name="email" type="email" class="form-control mb-2" maxlength="254">
     <label for="user-password" class="form-label">Password (12–256 characters; leave blank when editing to keep current password)</label><input id="user-password" name="password" class="form-control mb-2" type="password" autocomplete="new-password" minlength="12" maxlength="256">
     <label for="user-role" class="form-label">Role</label><select id="user-role" name="role" class="form-select mb-2"><option>viewer</option><option>technician</option><option>manager</option><option>admin</option></select>
     <label for="user-customer" class="form-label">Customer (required except for admins)</label><select id="user-customer" name="customer_id" class="form-select mb-2"></select>
@@ -18,7 +19,7 @@
     </fieldset>
   </form>
   <button id="users-retry" class="btn btn-outline-info mb-3">Refresh accounts</button>
-  <div class="table-responsive"><table class="table table-dark"><thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Customer</th><th>Status</th><th>Actions</th></tr></thead><tbody id="users-rows"></tbody></table></div>
+  <div class="table-responsive"><table class="table table-dark"><thead><tr><th>Username</th><th>Name</th><th>Email</th><th>Role</th><th>Customer</th><th>Status</th><th>Actions</th></tr></thead><tbody id="users-rows"></tbody></table></div>
   <p class="small text-secondary">Saving an account invalidates its existing sessions. Disable accounts to revoke access; accounts are retained for maintenance history.</p>
 </div>
 {% endblock %}

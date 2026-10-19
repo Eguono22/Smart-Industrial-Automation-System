@@ -270,7 +270,7 @@ Each actual change appends a timestamped snapshot in the same SQLite transaction
 Work orders remain attached to their original asset and cannot be deleted through
 the API; cancel unwanted tasks instead. Assets with work orders cannot be deleted.
 Assignments use registered technicians belonging to the asset customer. Older
-free-text assignments are preserved until reassigned. Notifications remain planned. Work order
+free-text assignments are preserved until reassigned. Email notifications are available through the optional SMTP worker. Work order
 status does not change asset status or machine controls. New history entries record the authenticated actor. Older entries retain an
 unknown actor rather than inferring an identity.
 
@@ -338,3 +338,58 @@ Task history includes `actor_id` and `actor_name`; legacy entries have null acto
 Operational PowerShell scripts accept `-Username` (or `SIAS_ADMIN_USERNAME`) and
 prompt for a password, or read `SIAS_ADMIN_PASSWORD` for unattended CI. Public
 smoke checks require no credentials; protected checks require an admin account.
+
+
+## Assignment and overdue email alerts
+
+Admins can add an optional email address to each account in **Users**. Assigning an
+active work order to a registered technician adds an email to the durable SQLite
+outbox in the same transaction as the task change. New notifications are visible
+at `/notifications`: admins can see the full delivery queue; other accounts see
+only their own notices for their current customer. Failed or skipped deliveries
+can be requeued by an admin. Retrying does not send immediately.
+
+Configure SMTP through environment variables (see `.env.example`):
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `SIAS_SMTP_HOST` | empty | SMTP server hostname |
+| `SIAS_SMTP_PORT` | `587` (`465` for SSL if omitted) | SMTP port |
+| `SIAS_SMTP_FROM` | empty | Single sender mailbox address |
+| `SIAS_SMTP_SECURITY` | `starttls` | `starttls`, `ssl`, or explicitly configured `plain` for a local relay |
+| `SIAS_SMTP_USERNAME` / `SIAS_SMTP_PASSWORD` | empty | Optional credentials; configure both or neither |
+
+Environment variables must be exported to the worker process; `.env.example` is a
+reference and is not loaded automatically. Use the same `SIAS_DATABASE_PATH` for
+the server and worker. No email is sent by web requests or without `--send`:
+
+```bash
+# Queue overdue notices without sending any email
+python scripts/process_notifications.py
+
+# Queue overdue notices and send up to 50 pending messages
+python scripts/process_notifications.py --send --limit 50
+```
+
+Run the second command from a scheduler (for example every five minutes) in the
+configured environment to enable ongoing delivery. There is no built-in scheduler.
+Overdue alerts are generated once per work order, assignee and due date; tasks due
+today or closed tasks are excluded. Unassigned tasks have no recipient. Delivery
+rechecks that the account is active, has email, remains a technician in the correct
+customer and is still assigned the active task. Obsolete notices are skipped.
+After adding a missing email address, an admin can retry a skipped notice.
+
+Statuses are `pending`, `processing`, `sent`, `failed` and `skipped`. `sent` means
+SMTP accepted the message, not confirmed inbox delivery; bounces are not tracked.
+Failed deliveries require an admin retry instead of automatic repeated sends.
+If a worker crashes while processing, stop all workers and investigate the SMTP
+provider's logs before running `--recover-processing` to release interrupted
+claims. Recovery or retry after an ambiguous SMTP outcome can duplicate mail,
+because SMTP delivery and database commits are not a single transaction. Running
+workers claim pending rows atomically to avoid normal concurrent duplicate sends.
+SMTP provider errors are summarized without exposing credentials in the UI.
+
+`GET /api/notifications` lists visible notices. Admin-only
+`POST /api/notifications/{id}/retry` requeues a failed/skipped notice and requires
+a valid account session and CSRF token. Notification sending is never exposed as
+a browser API action. SMTP credentials remain server-side.

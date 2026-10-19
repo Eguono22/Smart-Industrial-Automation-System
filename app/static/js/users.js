@@ -18,7 +18,7 @@
     const rows = document.getElementById('users-rows'); rows.replaceChildren();
     accounts.users.forEach(user => {
       const tr = document.createElement('tr');
-      [user.username, user.name, user.role, registry.customers.find(c => c.id === user.customer_id)?.name || 'All customers', user.active ? 'Active' : 'Disabled'].forEach(value => { const td = document.createElement('td'); td.textContent = value; tr.append(td); });
+      [user.username, user.name, user.email || 'No email', user.role, registry.customers.find(c => c.id === user.customer_id)?.name || 'All customers', user.active ? 'Active' : 'Disabled'].forEach(value => { const td = document.createElement('td'); td.textContent = value; tr.append(td); });
       const td = document.createElement('td'), edit = document.createElement('button'); edit.className = 'btn btn-sm btn-outline-info'; edit.textContent = 'Edit';
       edit.addEventListener('click', () => {
         if (busy) return;

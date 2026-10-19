@@ -72,6 +72,13 @@ class AssetRegistry:
                     id INTEGER PRIMARY KEY,
                     work_order_id INTEGER NOT NULL REFERENCES work_orders(id) ON DELETE RESTRICT,
                     changed_at TEXT NOT NULL, snapshot TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS notifications (
+                    id INTEGER PRIMARY KEY, work_order_id INTEGER NOT NULL REFERENCES work_orders(id),
+                    user_id INTEGER NOT NULL REFERENCES users(id), event_key TEXT NOT NULL UNIQUE,
+                    kind TEXT NOT NULL, subject TEXT NOT NULL, body TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'pending', attempts INTEGER NOT NULL DEFAULT 0,
+                    created_at TEXT NOT NULL, sent_at TEXT, last_error TEXT NOT NULL DEFAULT '');
+                CREATE INDEX IF NOT EXISTS notification_recipient ON notifications(user_id, status);
                 CREATE INDEX IF NOT EXISTS work_orders_asset ON work_orders(asset_id);
                 CREATE INDEX IF NOT EXISTS work_order_events ON work_order_history(work_order_id);
                 CREATE INDEX IF NOT EXISTS sites_customer ON sites(customer_id);
@@ -80,6 +87,8 @@ class AssetRegistry:
             connection.execute('BEGIN IMMEDIATE')
             # Additive migrations preserve existing records and pre-account history.
             for table, column, definition in [
+                ('users', 'email', "TEXT NOT NULL DEFAULT ''"),
+                ('notifications', 'sent_to', "TEXT NOT NULL DEFAULT ''"),
                 ('work_orders', 'assignee_id', 'INTEGER REFERENCES users(id)'),
                 ('work_order_history', 'actor_id', 'INTEGER REFERENCES users(id)'),
                 ('work_order_history', 'actor_name', 'TEXT'),
@@ -309,6 +318,9 @@ class AssetRegistry:
                                     (*[clean[field] for field in fields], completed_at, now, now))
                 record_id = cursor.lastrowid
             row = dict(db.execute('SELECT * FROM work_orders WHERE id = ?', (record_id,)).fetchone())
-            db.execute('INSERT INTO work_order_history (work_order_id, changed_at, snapshot, actor_id, actor_name) VALUES (?, ?, ?, ?, ?)',
+            event = db.execute('INSERT INTO work_order_history (work_order_id, changed_at, snapshot, actor_id, actor_name) VALUES (?, ?, ?, ?, ?)',
                        (record_id, now, json.dumps(row), actor['id'] if actor else None, actor['name'] if actor else None))
+            if clean['assignee_id'] and clean['status'] in ('open', 'in_progress') and (not previous or previous['assignee_id'] != clean['assignee_id']):
+                from app.notifications import queue_notice
+                queue_notice(db, row, clean['assignee_id'], 'assignment', f"assignment:{event.lastrowid}", now)
             return self._work_order(row)

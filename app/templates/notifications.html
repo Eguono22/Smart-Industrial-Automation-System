@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}SIAS Hub – Maintenance Notifications{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h1>Maintenance notifications</h1>
+  <p class="text-secondary">{% if current_user.role == 'admin' %}View the delivery queue for all accounts and retry failed or skipped messages.{% else %}Your assignment and overdue-task notifications.{% endif %}</p>
+  <p id="notice-message" role="status">Loading notifications…</p>
+  <div class="d-flex flex-wrap gap-3 mb-3">
+    <div><label for="notice-status" class="form-label">Delivery status</label><select id="notice-status" class="form-select"><option value="">All statuses</option><option>pending</option><option>processing</option><option>sent</option><option>failed</option><option>skipped</option></select></div>
+    <button id="notice-refresh" class="btn btn-outline-info align-self-end">Refresh</button>
+  </div>
+  <div class="table-responsive"><table class="table table-dark align-middle"><thead><tr><th>Notice</th><th>Recipient</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead><tbody id="notice-rows"></tbody></table></div>
+  <p class="small text-secondary">Sent means the SMTP server accepted the message. Delivery requires configured SMTP and a running notification worker. Skipped notices may refer to reassigned or closed tasks. Retrying queues a new attempt; it does not send email immediately.</p>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/notifications.js') }}"></script>{% endblock %}
