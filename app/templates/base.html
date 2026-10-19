@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="sias-api-token" content="{{ ui_api_token }}" />
+  <meta name="csrf-token" content="{{ csrf_token }}" />
+  <meta name="user-id" content="{{ current_user.id if current_user else '' }}" />
+  <meta name="user-role" content="{{ current_user.role if current_user else '' }}" />
   <title>{% block title %}Smart Industrial Automation System{% endblock %}</title>
 
   <!-- Bootstrap 5 (vendored) -->
@@ -20,13 +22,17 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-black border-bottom border-secondary shadow-sm">
   <div class="container-fluid px-3">
     <a class="navbar-brand fw-bold" href="/">
-      <i class="bi bi-cpu-fill text-primary me-2"></i>SIAS
+      <i class="bi bi-cpu-fill text-primary me-2"></i>SIAS Hub
     </a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navMenu">
       <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link {% if request.path == '/work-orders' %}active{% endif %}" href="/work-orders">Work orders</a></li>
+        <li class="nav-item"><a class="nav-link {% if request.path == '/assets' %}active{% endif %}" href="/assets">Assets</a></li>
+        <li class="nav-item"><a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">Industry Hub</a></li>
+        {% if current_user and current_user.role == 'admin' %}
         <li class="nav-item">
           <a class="nav-link {% if request.path == '/dashboard' %}active{% endif %}" href="/dashboard">
             <i class="bi bi-speedometer2 me-1"></i>Dashboard
@@ -42,8 +48,14 @@
             <i class="bi bi-tools me-1"></i>Maintenance
           </a>
         </li>
+        {% endif %}
       </ul>
       <div class="d-flex align-items-center gap-2 small">
+        {% if current_user %}
+        <span>{{ current_user.name }} · {{ current_user.role }}</span>
+        {% if current_user.role == 'admin' %}<a href="/users" class="btn btn-sm btn-outline-light">Users</a>{% endif %}
+        <button id="logout" class="btn btn-sm btn-outline-light">Log out</button>
+        {% else %}<a href="/login" class="btn btn-sm btn-outline-light">Log in</a>{% endif %}
         <span id="connection-badge" class="badge bg-secondary">
           <i class="bi bi-circle-fill me-1"></i>Connecting…
         </span>
@@ -66,16 +78,24 @@
 <script src="{{ url_for('static', filename='vendor/chart.umd.min.js') }}"></script>
 
 <script>
-  const SIAS_API_TOKEN = document.querySelector('meta[name="sias-api-token"]')?.content || '';
+  const SIAS_CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.content || '';
+  const SIAS_USER_ID = Number(document.querySelector('meta[name="user-id"]')?.content || 0);
+  const SIAS_ROLE = document.querySelector('meta[name="user-role"]')?.content || '';
 
   async function siasFetch(url, options = {}) {
     const opts = { ...options };
     opts.headers = opts.headers ? { ...opts.headers } : {};
-    if (SIAS_API_TOKEN) {
-      opts.headers['X-API-Key'] = SIAS_API_TOKEN;
-    }
+    opts.headers['X-CSRF-Token'] = SIAS_CSRF_TOKEN;
     return fetch(url, opts);
   }
+
+  document.getElementById('logout')?.addEventListener('click', async () => {
+    try {
+      const response = await siasFetch('/api/auth/logout', {method: 'POST'});
+      if (response.ok) window.location.assign('/login');
+      else window.alert('Logout failed. Refresh and try again.');
+    } catch (_) { window.alert('Logout failed. Check your connection and try again.'); }
+  });
 
   // Clock
   function updateClock() {
@@ -120,6 +140,7 @@
   // Global SocketIO connection
   // Start with polling for fastest compatibility, then upgrade to websocket.
   const socket = io({
+    autoConnect: SIAS_ROLE === 'admin',
     transports: ['polling', 'websocket'],
     timeout: 8000,
     reconnection: true,

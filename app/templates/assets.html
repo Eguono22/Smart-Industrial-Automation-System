@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}SIAS Hub – Asset Registry{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h1>Customer, site and asset registry</h1>
+  <a href="/work-orders" class="btn btn-outline-info mb-3">Manage maintenance work orders</a>
+  <p class="text-secondary">Register a customer, add their locations, then record the equipment at each site. Asset status is entered manually.</p>
+  <div id="registry-message" role="status" aria-live="polite" class="alert alert-secondary">Loading registry…</div>
+  <button id="registry-retry" class="btn btn-outline-info mb-3" hidden>Retry loading</button>
+  <div class="row g-3 mb-4">
+    {% for kind, label in [('customers', 'Customers'), ('sites', 'Sites'), ('assets', 'Assets')] %}
+    <div class="col-sm-4"><div class="card bg-dark border-secondary p-3"><strong id="count-{{ kind }}" class="fs-3">—</strong>{{ label }}</div></div>
+    {% endfor %}
+  </div>
+  <div class="row g-4 mb-5">
+    <section class="col-lg-4" aria-labelledby="customer-heading">
+      <h2 id="customer-heading" class="h4">Customer</h2>
+      <form id="form-customers" class="card bg-dark border-secondary p-3 registry-form" data-kind="customers">
+        <fieldset disabled>
+          <input type="hidden" name="id">
+          <label for="customer-name" class="form-label">Customer name</label><input id="customer-name" name="name" class="form-control mb-3" required maxlength="200">
+          <label for="customer-industry" class="form-label">Industry</label><select id="customer-industry" name="industry" class="form-select mb-3" required>{% for industry in industries %}<option value="{{ industry.id }}">{{ industry.name }}</option>{% endfor %}</select>
+          <button type="submit" class="btn btn-primary">Add customer</button><button type="button" class="btn btn-outline-secondary cancel-edit" hidden>Cancel edit</button>
+        </fieldset>
+      </form>
+    </section>
+    <section class="col-lg-4" aria-labelledby="site-heading">
+      <h2 id="site-heading" class="h4">Site</h2>
+      <form id="form-sites" class="card bg-dark border-secondary p-3 registry-form" data-kind="sites">
+        <fieldset disabled>
+          <input type="hidden" name="id">
+          <label for="site-customer" class="form-label">Customer</label><select id="site-customer" name="customer_id" class="form-select mb-3" required></select>
+          <label for="site-name" class="form-label">Site name</label><input id="site-name" name="name" class="form-control mb-3" required maxlength="200">
+          <label for="site-location" class="form-label">Location (optional)</label><input id="site-location" name="location" class="form-control mb-3" maxlength="200">
+          <button type="submit" class="btn btn-primary">Add site</button><button type="button" class="btn btn-outline-secondary cancel-edit" hidden>Cancel edit</button>
+        </fieldset>
+      </form>
+    </section>
+    <section class="col-lg-4" aria-labelledby="asset-heading">
+      <h2 id="asset-heading" class="h4">Asset</h2>
+      <form id="form-assets" class="card bg-dark border-secondary p-3 registry-form" data-kind="assets">
+        <fieldset disabled>
+          <input type="hidden" name="id">
+          <label for="asset-site" class="form-label">Site</label><select id="asset-site" name="site_id" class="form-select mb-3" required></select>
+          <label for="asset-name" class="form-label">Asset name</label><input id="asset-name" name="name" class="form-control mb-3" required maxlength="200">
+          <label for="asset-type" class="form-label">Equipment type</label><input id="asset-type" name="asset_type" class="form-control mb-3" required maxlength="200" placeholder="Pump, conveyor, chiller…">
+          <label for="asset-serial" class="form-label">Serial number (optional)</label><input id="asset-serial" name="serial_number" class="form-control mb-3" maxlength="200">
+          <label for="asset-criticality" class="form-label">Criticality</label><select id="asset-criticality" name="criticality" class="form-select mb-3"><option>low</option><option selected>medium</option><option>high</option><option>critical</option></select>
+          <label for="asset-status" class="form-label">Status</label><select id="asset-status" name="status" class="form-select mb-3"><option selected>unknown</option><option>operational</option><option>maintenance</option><option>offline</option></select>
+          <button type="submit" class="btn btn-primary">Add asset</button><button type="button" class="btn btn-outline-secondary cancel-edit" hidden>Cancel edit</button>
+        </fieldset>
+      </form>
+    </section>
+  </div>
+  <section aria-labelledby="directory-heading">
+    <h2 id="directory-heading">Registry directory</h2>
+    <div class="row g-3 mb-4">
+      <div class="col-md-6"><label for="registry-search" class="form-label">Search names, equipment, location or serial number</label><input id="registry-search" class="form-control" type="search"></div>
+      <div class="col-md-3"><label for="filter-customer" class="form-label">Customer</label><select id="filter-customer" class="form-select"><option value="">All customers</option></select></div>
+      <div class="col-md-3"><label for="filter-status" class="form-label">Asset status</label><select id="filter-status" class="form-select"><option value="">All statuses</option><option>unknown</option><option>operational</option><option>maintenance</option><option>offline</option></select></div>
+    </div>
+    {% for kind, label, headers in [('customers', 'Customers', ['Name', 'Industry', 'Actions']), ('sites', 'Sites', ['Name', 'Customer', 'Location', 'Actions']), ('assets', 'Assets', ['Name', 'Customer / site', 'Equipment type', 'Serial number', 'Criticality', 'Status', 'Actions'])] %}
+    <h3 class="h5">{{ label }}</h3>
+    <div class="table-responsive mb-4"><table class="table table-dark table-hover align-middle"><caption class="text-secondary">{{ label }} matching current filters</caption><thead><tr>{% for header in headers %}<th scope="col">{{ header }}</th>{% endfor %}</tr></thead><tbody id="rows-{{ kind }}"></tbody></table></div>
+    {% endfor %}
+  </section>
+  <p class="small text-secondary">Equipment records persist on the server. Registering an asset does not connect it to the live simulator. Your account role controls which customer records you can view and change.</p>
+</div>
+<script id="registry-industries" type="application/json">{{ industries|tojson }}</script>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/assets.js') }}"></script>{% endblock %}

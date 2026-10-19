@@ -2,7 +2,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$BaseUrl,
 
-    [string]$ApiToken = "",
+    [string]$Username = $env:SIAS_ADMIN_USERNAME,
 
     [int]$TimeoutSeconds = 120,
 
@@ -15,20 +15,14 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-function New-SiasHeaders {
-    $headers = @{}
-    if ($ApiToken) {
-        $headers["X-API-Key"] = $ApiToken
-    }
-    return $headers
-}
+. "$PSScriptRoot/auth_session.ps1"
 
 function Invoke-SiasGet {
     param(
         [string]$Url,
         [hashtable]$Headers
     )
-    return Invoke-RestMethod -Uri $Url -Method GET -Headers $Headers
+    return Invoke-RestMethod -Uri $Url -Method GET -WebSession $auth.Session -Headers $Headers
 }
 
 function Invoke-SiasPost {
@@ -36,7 +30,7 @@ function Invoke-SiasPost {
         [string]$Url,
         [hashtable]$Headers
     )
-    return Invoke-RestMethod -Uri $Url -Method POST -Headers $Headers -Body "{}" -ContentType "application/json"
+    return Invoke-RestMethod -Uri $Url -Method POST -WebSession $auth.Session -Headers $Headers -Body "{}" -ContentType "application/json"
 }
 
 function Assert-Ok {
@@ -116,7 +110,8 @@ function Write-ValidationReport {
 }
 
 $root = $BaseUrl.TrimEnd("/")
-$headers = New-SiasHeaders
+$auth = New-SiasSession -Root $root -Username $Username
+$headers = $auth.Headers
 $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
 $startedAt = Get-Date
 $events = [System.Collections.Generic.List[object]]::new()

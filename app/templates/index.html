@@ -1,54 +1,73 @@
 {% extends "base.html" %}
-{% block title %}SIAS – Home{% endblock %}
-
+{% block title %}SIAS Hub – Industries and Solutions{% endblock %}
 {% block content %}
-<div class="row justify-content-center align-items-center" style="min-height:80vh">
-  <div class="col-md-8 text-center py-5">
-    <i class="bi bi-cpu-fill display-1 text-primary mb-3"></i>
-    <h1 class="display-4 fw-bold">Smart Industrial Automation System</h1>
-    <p class="lead text-secondary mt-3 mb-4">
-      Predictive Maintenance platform combining <strong>PLC ladder logic</strong>,
-      <strong>real-time sensor analytics</strong> and an <strong>ML anomaly detection engine</strong>
-      to keep your industrial machines running safely and efficiently.
-    </p>
-    <div class="row g-3 justify-content-center mt-2">
-      <div class="col-sm-4">
-        <a href="/dashboard" class="btn btn-primary btn-lg w-100 shadow">
-          <i class="bi bi-speedometer2 me-2"></i>Live Dashboard
-        </a>
-      </div>
-      <div class="col-sm-4">
-        <a href="/plc-monitor" class="btn btn-outline-info btn-lg w-100 shadow">
-          <i class="bi bi-diagram-3 me-2"></i>PLC Monitor
-        </a>
-      </div>
-      <div class="col-sm-4">
-        <a href="/maintenance" class="btn btn-outline-warning btn-lg w-100 shadow">
-          <i class="bi bi-tools me-2"></i>Maintenance Log
-        </a>
-      </div>
-    </div>
-
-    <div class="row g-4 mt-5 text-start">
-      <div class="col-md-4">
-        <div class="card bg-secondary bg-opacity-10 border-secondary h-100 p-3">
-          <h5 class="text-primary"><i class="bi bi-graph-up-arrow me-2"></i>Sensor Analytics</h5>
-          <p class="text-secondary small mb-0">Real-time monitoring of Temperature, Pressure, Vibration, Current, RPM and Oil Level with live trend charts.</p>
-        </div>
-      </div>
-      <div class="col-md-4">
-        <div class="card bg-secondary bg-opacity-10 border-secondary h-100 p-3">
-          <h5 class="text-info"><i class="bi bi-diagram-3 me-2"></i>PLC Ladder Logic</h5>
-          <p class="text-secondary small mb-0">Simulated PLC with motor interlocks, emergency stop, pressure relief and alarm horn rungs updated every scan cycle.</p>
-        </div>
-      </div>
-      <div class="col-md-4">
-        <div class="card bg-secondary bg-opacity-10 border-secondary h-100 p-3">
-          <h5 class="text-warning"><i class="bi bi-shield-exclamation me-2"></i>Predictive ML</h5>
-          <p class="text-secondary small mb-0">Isolation Forest anomaly detection calculates a health score and Remaining Useful Life (RUL) estimate in real time.</p>
-        </div>
-      </div>
-    </div>
+<div class="container py-4">
+  <header class="py-4">
+    <span class="badge bg-primary mb-3">SIAS HUB · INDUSTRIES & SOLUTIONS</span>
+    <h1 class="display-5 fw-bold">Connect your assets.<br>Plan smarter operations.</h1>
+    <p class="lead text-secondary col-lg-9">Explore industry use cases, identify potential customer segments and build a solution plan around monitoring, maintenance and automation.</p>
+    <div class="d-flex flex-wrap gap-2"><a class="btn btn-primary" href="/assets">Manage customers &amp; assets</a><a class="btn btn-outline-primary" href="/dashboard">Open live demo</a><a class="btn btn-outline-info" href="/plc-monitor">PLC monitor</a><a class="btn btn-outline-warning" href="/maintenance">Maintenance</a><a class="btn btn-outline-light" href="#planner">Build a solution plan</a></div>
+    <p class="small text-secondary mt-3">The live demo monitors one simulated machine. Industry profiles describe potential applications, not deployed solutions or existing customers.</p>
+  </header>
+  <div class="row g-3 mb-5">
+    <div class="col-sm-4"><div class="card p-3 bg-dark border-secondary"><strong class="fs-3">{{ industries|length }}</strong><span>Industry profiles</span></div></div>
+    <div class="col-sm-4"><div class="card p-3 bg-dark border-secondary"><strong class="fs-3">{{ capabilities|length }}</strong><span>Available and planned capabilities</span></div></div>
+    <div class="col-sm-4"><div class="card p-3 bg-dark border-secondary"><strong class="fs-3">{{ capabilities|selectattr('status', 'equalto', 'Available')|list|length }}</strong><span>Available capabilities</span></div></div>
   </div>
+  <section aria-labelledby="industries-heading" class="mb-5">
+    <h2 id="industries-heading">Find your industry and customers</h2>
+    <label for="industry-search" class="form-label">Search industries, customer types, equipment or KPIs</label>
+    <input id="industry-search" class="form-control mb-2" type="search" placeholder="Try hospitals, pumps, cold stores or energy…">
+    <p id="industry-count" class="text-secondary small" aria-live="polite"></p>
+    <div class="row g-3" id="industry-grid">
+      {% for industry in industries %}
+      <div class="col-md-6 col-xl-4 industry-item" data-search="{{ (industry.name ~ ' ' ~ industry.customers ~ ' ' ~ industry.assets ~ ' ' ~ industry.kpis)|lower }}">
+        <article class="card bg-dark border-secondary h-100 p-3">
+          <h3 class="h5">{{ industry.name }}</h3>
+          <p class="small"><strong>Potential customers:</strong> {{ industry.customers }}</p>
+          <p class="small text-secondary"><strong>Typical assets:</strong> {{ industry.assets }}</p>
+          <p class="small text-secondary"><strong>Target KPIs:</strong> {{ industry.kpis }}</p>
+          <button class="btn btn-sm btn-outline-info mt-auto select-industry" data-industry="{{ industry.id }}">Plan this solution</button>
+        </article>
+      </div>
+      {% endfor %}
+    </div>
+    <p id="industry-empty" class="alert alert-secondary" hidden>No matching industries. Try a broader equipment or customer term.</p>
+  </section>
+  <section id="planner" aria-labelledby="planner-heading" class="mb-5">
+    <h2 id="planner-heading">Solution planner</h2>
+    <p class="text-secondary">Choose an industry to load suggested capabilities, then tailor your plan. Selections are saved in this browser when storage is available.</p>
+    <div class="row g-3 mb-4">
+      <div class="col-md-6"><label for="plan-customer" class="form-label">Customer or project name (optional)</label><input id="plan-customer" class="form-control" maxlength="160" placeholder="Your project"></div>
+      <div class="col-md-6"><label for="plan-industry" class="form-label">Industry</label><select id="plan-industry" class="form-select">{% for industry in industries %}<option value="{{ industry.id }}">{{ industry.name }}</option>{% endfor %}</select></div>
+    </div>
+    <div id="plan-context" class="alert alert-secondary"></div>
+    <div class="d-flex flex-wrap gap-3 mb-3">
+      <label for="capability-status" class="form-label">Show capabilities</label>
+      <select id="capability-status" class="form-select w-auto"><option value="all">All statuses</option><option>Available</option><option>Planned</option></select>
+      <span id="plan-summary" class="align-self-center small" aria-live="polite"></span>
+    </div>
+    <div class="row g-3 mb-4">
+      {% for capability in capabilities %}
+      <div class="col-md-6 capability-item" data-status="{{ capability.status }}">
+        <label class="card bg-dark border-secondary h-100 p-3 d-block" for="cap-{{ capability.id }}">
+          <input class="form-check-input me-2 capability-check" type="checkbox" id="cap-{{ capability.id }}" value="{{ capability.id }}">
+          <strong>{{ capability.name }}</strong>
+          <span class="badge {{ 'bg-success' if capability.status == 'Available' else 'bg-secondary' }} ms-2">{{ capability.status }}</span>
+          <span class="d-block small text-secondary mt-2">{{ capability.description }}</span>
+        </label>
+      </div>
+      {% endfor %}
+    </div>
+    <label for="plan-notes" class="form-label">Requirements and success criteria</label>
+    <textarea id="plan-notes" class="form-control mb-3" rows="3" maxlength="4000" placeholder="Assets, site count, required integrations, target KPIs…"></textarea>
+    <div class="d-flex flex-wrap gap-2"><button id="plan-export" class="btn btn-primary">Export solution plan (JSON)</button><button id="plan-reset" class="btn btn-outline-secondary">Reset to industry suggestions</button></div>
+    <p id="plan-message" class="small text-secondary mt-2" role="status"></p>
+    <p class="small text-secondary">Planned modules are discovery items and require implementation. Industry-specific sensors, integrations and validation are required before operational deployment. This planner does not configure or control equipment.</p>
+  </section>
 </div>
+{% endblock %}
+{% block scripts %}
+<script id="hub-catalog" type="application/json">{{ {'industries': industries, 'capabilities': capabilities}|tojson }}</script>
+<script src="{{ url_for('static', filename='js/hub.js') }}"></script>
 {% endblock %}

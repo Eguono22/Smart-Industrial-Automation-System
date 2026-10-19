@@ -25,10 +25,23 @@ jobs:
         run: |
           python -m pytest tests/ -v
 
-      - name: Run deterministic demo validation
+      - name: Provision validation administrator
         shell: bash
         run: |
           mkdir -p artifacts
+          python - <<'PY'
+          import os, secrets
+          from app.auth import create_user
+          from app.models.assets import AssetRegistry
+          password = secrets.token_urlsafe(32)
+          create_user(AssetRegistry('instance/sias.sqlite3'), dict(username='ci-admin', name='CI Admin', password=password, role='admin'))
+          with open(os.environ['GITHUB_ENV'], 'a') as env:
+              env.write('SIAS_ADMIN_USERNAME=ci-admin\nSIAS_ADMIN_PASSWORD=' + password + '\n')
+          PY
+
+      - name: Run deterministic demo validation
+        shell: bash
+        run: |
           python app.py > server.log 2>&1 &
           server_pid=$!
           trap "kill $server_pid 2>/dev/null || true" EXIT

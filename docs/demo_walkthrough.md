@@ -54,7 +54,7 @@ powershell -ExecutionPolicy Bypass -File scripts/demo_validation.ps1 -BaseUrl ht
 For protected deployments:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/demo_validation.ps1 -BaseUrl https://your-deployment-url -ApiToken "<token>"
+powershell -ExecutionPolicy Bypass -File scripts/demo_validation.ps1 -BaseUrl https://your-deployment-url -Username "admin"
 ```
 
 Expected result:
@@ -74,3 +74,5 @@ Demo validation completed successfully.
 ## Success Message
 
 The demo proves SIAS can connect machine telemetry, predictive maintenance signals, PLC safety logic and operator alarm handling into one repeatable workflow.
+
+Protected demo APIs require an administrator session. Validation scripts prompt for the password, or read `SIAS_ADMIN_PASSWORD` for CI. Create the first administrator with `python scripts/manage_users.py`.

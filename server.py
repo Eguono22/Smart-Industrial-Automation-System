@@ -9,9 +9,12 @@ import os
 import uuid
 from datetime import datetime, timezone
 
-from flask import Flask, render_template, jsonify, request, g
+from flask import Flask, render_template, jsonify, request, g, session
 from flask_socketio import SocketIO, emit
 
+from app.asset_routes import assets_bp
+from app.auth import install_auth, authenticated_user
+from app.models.hub import CAPABILITIES, INDUSTRIES
 from app.models.sensor import SensorSimulator
 from app.models.plc_adapter import build_plc_adapter
 from app.models.predictor import PredictiveMaintenanceEngine
@@ -21,19 +24,22 @@ from app.models.predictor import PredictiveMaintenanceEngine
 # ---------------------------------------------------------------------------
 app = Flask(__name__, template_folder="app/templates", static_folder="app/static")
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "sias-dev-secret")
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
+app.config["SIAS_DATABASE_PATH"] = os.environ.get("SIAS_DATABASE_PATH", os.path.join(app.instance_path, "sias.sqlite3"))
+app.register_blueprint(assets_bp)
+app.config["SESSION_COOKIE_SECURE"] = os.environ.get("SIAS_COOKIE_SECURE", "0") == "1"
+install_auth(app)
+socketio = SocketIO(app, async_mode="threading")
 
 # ---------------------------------------------------------------------------
 # Shared state (protected by a simple lock for the background thread)
 # ---------------------------------------------------------------------------
 _lock = threading.Lock()
+_operator_sessions = {}
 sensor_sim = SensorSimulator()
 plc = build_plc_adapter()
 predictor = PredictiveMaintenanceEngine()
 _started_at = time.time()
 _request_metrics = {"total": 0, "errors": 0}
-_API_TOKEN = os.environ.get("SIAS_API_TOKEN", "").strip()
-_UI_API_TOKEN = os.environ.get("SIAS_UI_API_TOKEN", "").strip()
 
 # Start machine by default for demo
 plc.start_machine()
@@ -43,6 +49,18 @@ sensor_sim.set_machine_running(True)
 # Background data-refresh thread
 # ---------------------------------------------------------------------------
 _UPDATE_INTERVAL = 2  # seconds between sensor readings
+
+
+def _broadcast_update(payload):
+    with _lock:
+        operators = list(_operator_sessions.items())
+    with app.app_context():
+        for sid, token in operators:
+            user = authenticated_user(token)
+            if user and user['role'] == 'admin':
+                socketio.emit('data_update', payload, to=sid)
+            else:
+                socketio.server.disconnect(sid)
 
 
 def _background_update():
@@ -62,7 +80,7 @@ def _background_update():
             "prediction": prediction,
             "demo": demo_status,
         }
-        socketio.emit("data_update", payload)
+        _broadcast_update(payload)
 
 
 # Serverless platforms do not keep persistent sockets; avoid idle threads there.
@@ -75,22 +93,11 @@ if os.environ.get("VERCEL") != "1":
 # ---------------------------------------------------------------------------
 
 
-@app.context_processor
-def inject_template_globals():
-    return {"ui_api_token": _UI_API_TOKEN}
-
-
 @app.before_request
 def before_request():
     g.request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
     _request_metrics["total"] += 1
 
-    # Protect mutating endpoints in production using SIAS_API_TOKEN.
-    if _API_TOKEN and request.path.startswith("/api/") and request.method in {"POST", "PUT", "PATCH", "DELETE"}:
-        presented = request.headers.get("X-API-Key", "")
-        if presented != _API_TOKEN:
-            _request_metrics["errors"] += 1
-            return jsonify({"ok": False, "error": "unauthorized"}), 401
 
 
 @app.after_request
@@ -104,7 +111,12 @@ def after_request(resp):
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", industries=INDUSTRIES, capabilities=CAPABILITIES)
+
+
+@app.route("/api/hub/catalog")
+def api_hub_catalog():
+    return jsonify({"industries": INDUSTRIES, "capabilities": CAPABILITIES})
 
 
 @app.route("/dashboard")
@@ -353,9 +365,19 @@ def api_demo_stop():
 
 @socketio.on("connect")
 def on_connect():
+    user = authenticated_user()
+    if not user or user['role'] != 'admin':
+        return False
     with _lock:
+        _operator_sessions[request.sid] = session['sid']
         sd = sensor_sim.read()
         plc_status = plc.get_status()
         prediction = predictor.update(sd)
         demo_status = sensor_sim.get_demo_status()
     emit("data_update", {"sensors": sd, "plc": plc_status, "prediction": prediction, "demo": demo_status})
+
+
+@socketio.on('disconnect')
+def on_disconnect():
+    with _lock:
+        _operator_sessions.pop(request.sid, None)
