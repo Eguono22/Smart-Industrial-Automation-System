@@ -101,6 +101,10 @@ def install_auth(app):
     @app.before_request
     def authenticate():
         g.user = None
+        # This one endpoint accepts only an asset-scoped bearer credential.
+        # The endpoint verifies it atomically with storing readings; no cookie access.
+        if request.endpoint == 'telemetry.ingest' and request.method == 'POST':
+            return None
         g.user = authenticated_user()
         public = request.path in ('/', '/login', '/api/auth/me', '/api/auth/login', '/api/hub/catalog', '/health', '/ready') or request.path.startswith('/static/')
         if not public:
@@ -108,7 +112,7 @@ def install_auth(app):
                 if request.path.startswith(('/api/', '/socket.io/')) or request.path == '/metrics':
                     return jsonify(ok=False, error='Login required'), 401
                 return redirect('/login')
-            tenant_routes = request.path in ('/assets', '/work-orders', '/notifications') or request.path.startswith(('/api/registry', '/api/work-orders', '/api/auth', '/api/notifications'))
+            tenant_routes = request.path in ('/assets', '/work-orders', '/notifications', '/telemetry') or request.path.startswith(('/api/registry', '/api/work-orders', '/api/auth', '/api/notifications', '/api/telemetry'))
             if not tenant_routes and g.user['role'] != 'admin':
                 return jsonify(ok=False, error='Administrator access required'), 403
         if request.method in ('POST', 'PATCH', 'PUT', 'DELETE'):

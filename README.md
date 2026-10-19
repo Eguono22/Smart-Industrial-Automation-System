@@ -250,8 +250,8 @@ Criticality values: `low`, `medium` (default), `high`, `critical`.
 Status values: `unknown` (default), `operational`, `maintenance`, `offline`.
 Registry reads and writes require account sessions. Customer access is enforced
 for managers, technicians and viewers; administrators have global access. The
-registry does not implement live device connections or per-asset telemetry. Registered assets
-are independent of the existing single-machine simulation.
+registry links to the Equipment data page for asset telemetry submitted by an HTTP
+gateway. Registered assets remain independent of the single-machine simulation.
 
 
 ## Maintenance work orders
@@ -393,3 +393,84 @@ SMTP provider errors are summarized without exposing credentials in the UI.
 `POST /api/notifications/{id}/retry` requeues a failed/skipped notice and requires
 a valid account session and CSRF token. Notification sending is never exposed as
 a browser API action. SMTP credentials remain server-side.
+
+
+## Equipment gateway telemetry
+
+The **Equipment data** page (`/telemetry`) shows asset-linked readings, recent
+history, charts and data freshness. Customer scoping is enforced on reads. Admins
+and managers can generate, rotate or revoke a device credential for assets they
+manage. Viewers and technicians have read-only monitoring access. Credentials are
+shown once, stored as SHA-256 hashes and restricted to one asset's ingestion URL;
+they cannot read customer data, access user accounts or control machinery.
+Device credentials are independent of user login sessions and do not expire
+with a manager's session: explicitly rotate or revoke them when access changes.
+
+To connect a gateway:
+
+1. Register a customer, site and asset, then open **Equipment data** and choose it.
+2. Generate a device credential and store it securely on your equipment gateway.
+3. Have your gateway read its sensors and POST JSON to
+   `/api/telemetry/{asset_id}/readings` with `Authorization: Bearer <device-token>`
+   and `Content-Type: application/json` over HTTPS.
+
+Example payload:
+
+```json
+{
+  "readings": {
+    "temperature": {"value": 71.2, "unit": "°C"},
+    "pressure": {"value": 3.1, "unit": "bar"},
+    "flow_rate": {"value": 24.5, "unit": "L/min"}
+  }
+}
+```
+
+An optional `timestamp` must be ISO 8601 with an explicit timezone, for example
+`2026-10-19T14:30:00Z`; use the actual measurement time, not that example value.
+Omit it to use server receive time. Timestamps must be within the past 30 days
+and at most 30 seconds in the future. Gateways should maintain accurate clocks.
+Each batch is a snapshot of the included channels; omitted channels are not
+silently filled from older batches. Include all desired current channels in each
+batch. Sensor names use lowercase letters, digits and underscores, starting with
+a letter (maximum 64 characters). Submit 1–32 channels per batch; each channel
+requires a finite numeric `value` and printable `unit` of up to 32 characters.
+The payload limit is 32 KiB. Unit changes remain distinct in trend selection;
+values are not converted or classified against the simulator's thresholds.
+
+The supplied uploader can forward a gateway-generated JSON file:
+
+```bash
+# Export SIAS_DEVICE_TOKEN securely in your gateway environment first.
+python scripts/publish_readings.py --base-url https://your-sias-host --asset-id 1 --file readings.json
+```
+
+The uploader reads actual input from the file and does not generate simulated
+measurements. Adapt your existing equipment gateway or protocol driver to produce
+that file or POST directly. This release provides HTTP ingestion; it does not
+include new OPC UA, MQTT or Modbus sensor-read drivers, and no physical equipment
+has been commissioned or validated as part of this implementation.
+
+Read APIs require an account session:
+
+- `GET /api/telemetry/{asset_id}?limit=60`: latest batch, history and connection
+  status; `limit` is 1–300.
+- `POST /api/telemetry/{asset_id}/credential`: generate/rotate a device token.
+- `DELETE /api/telemetry/{asset_id}/credential`: revoke it. Credential changes
+  require an admin/manager session and CSRF token.
+- `POST /api/telemetry/{asset_id}/readings`: device-token-only ingestion; session
+  cookies do not authorize it, and this bearer-token endpoint does not use CSRF.
+
+Freshness is `never_seen` until the first batch, `connected` when the newest
+measurement is at most 120 seconds old, and `stale` after that. This means recent
+data receipt, not an actively tested network connection. Out-of-order packets do
+not replace newer measurements. Last receive time is tracked separately, including
+buffered packets that are too old to retain. The newest 300 batches per asset are
+persisted in SQLite; this is a bounded recent history rather than a long-term
+historian. The page polls every 10 seconds and displays up to 60 batches.
+
+Rotating/revoking credentials immediately rejects previous tokens. Moving an
+asset with no history to another customer revokes its old credential. Assets with
+maintenance or telemetry history cannot move between customers; telemetry history
+and configured credentials also prevent accidental asset deletion. These readings
+do not feed the demo ML model, create safety alarms or drive PLC outputs.

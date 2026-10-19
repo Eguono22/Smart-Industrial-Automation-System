@@ -72,6 +72,15 @@ class AssetRegistry:
                     id INTEGER PRIMARY KEY,
                     work_order_id INTEGER NOT NULL REFERENCES work_orders(id) ON DELETE RESTRICT,
                     changed_at TEXT NOT NULL, snapshot TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS device_credentials (
+                    asset_id INTEGER PRIMARY KEY REFERENCES assets(id), token_hash TEXT NOT NULL,
+                    customer_id INTEGER NOT NULL REFERENCES customers(id), rotated_at TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS telemetry_state (
+                    asset_id INTEGER PRIMARY KEY REFERENCES assets(id), last_received_at TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS telemetry_batches (
+                    id INTEGER PRIMARY KEY, asset_id INTEGER NOT NULL REFERENCES assets(id),
+                    measured_at TEXT NOT NULL, received_at TEXT NOT NULL, readings TEXT NOT NULL);
+                CREATE INDEX IF NOT EXISTS telemetry_asset_time ON telemetry_batches(asset_id, measured_at, id);
                 CREATE TABLE IF NOT EXISTS notifications (
                     id INTEGER PRIMARY KEY, work_order_id INTEGER NOT NULL REFERENCES work_orders(id),
                     user_id INTEGER NOT NULL REFERENCES users(id), event_key TEXT NOT NULL UNIQUE,
@@ -181,8 +190,10 @@ class AssetRegistry:
             if previous and kind == 'assets' and previous['site_id'] != clean['site_id']:
                 old_owner = db.execute('SELECT customer_id FROM sites WHERE id=?', (previous['site_id'],)).fetchone()[0]
                 new_owner = db.execute('SELECT customer_id FROM sites WHERE id=?', (clean['site_id'],)).fetchone()[0]
-                if old_owner != new_owner and db.execute('SELECT id FROM work_orders WHERE asset_id=? LIMIT 1', (record_id,)).fetchone():
-                    raise RegistryError('Assets with maintenance history cannot move between customers', 409)
+                if old_owner != new_owner and (db.execute('SELECT id FROM work_orders WHERE asset_id=? LIMIT 1', (record_id,)).fetchone() or db.execute('SELECT id FROM telemetry_batches WHERE asset_id=? LIMIT 1', (record_id,)).fetchone()):
+                    raise RegistryError('Assets with maintenance or telemetry history cannot move between customers', 409)
+                if old_owner != new_owner:
+                    db.execute('DELETE FROM device_credentials WHERE asset_id=?', (record_id,))
             fields = FIELDS[kind]
             if record_id is None:
                 placeholders = ', '.join('?' for _ in fields)

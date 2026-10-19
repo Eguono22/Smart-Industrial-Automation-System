@@ -3,7 +3,7 @@
 CAPABILITIES = [
     {"id": key, "name": name, "status": status, "description": description}
     for key, name, status, description in [
-        ("monitoring", "Live asset monitoring", "Available", "Six simulated sensor channels, live trends and machine status."),
+        ("monitoring", "Live asset monitoring", "Available", "Six simulated sensor channels plus asset-linked HTTP gateway readings, trends and data freshness."),
         ("prediction", "Predictive maintenance", "Available", "Anomaly detection, health trends and demo remaining-life estimates."),
         ("control", "PLC control and interlocks", "Available", "Simulated ladder logic and optional Modbus TCP output-coil bridge; site engineering required."),
         ("alarms", "Alarm management", "Available", "Prioritized machine alarms and operator acknowledgement."),
@@ -18,7 +18,7 @@ CAPABILITIES = [
         ("coldchain", "Cold-chain monitoring", "Planned", "Temperature excursions, storage conditions and shipment history."),
         ("inventory", "Inventory and logistics", "Planned", "Material levels, stock movements, warehouse assets and replenishment."),
         ("security", "Enterprise access and audit", "Planned", "Expanded enterprise controls, SSO and organization-wide audit reporting. Local account roles, customer access and task history are available."),
-        ("connectivity", "Industrial connectivity", "Planned", "OPC UA, MQTT, BACnet and historian connectors with edge buffering."),
+        ("connectivity", "Industrial connectivity", "Planned", "OPC UA, MQTT, BACnet and historian connectors with edge buffering. Asset-scoped HTTP ingestion is available."),
         ("reporting", "Reports and notifications", "Planned", "Scheduled reports and configurable escalation rules. Assignment and overdue emails are available through the SMTP worker."),
     ]
 ]
