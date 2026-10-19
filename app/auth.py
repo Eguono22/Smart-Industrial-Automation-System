@@ -106,7 +106,7 @@ def install_auth(app):
         if request.endpoint == 'telemetry.ingest' and request.method == 'POST':
             return None
         g.user = authenticated_user()
-        public = request.path in ('/', '/founder', '/login', '/api/auth/me', '/api/auth/login', '/api/hub/catalog', '/health', '/ready') or request.path.startswith('/static/')
+        public = request.path in ('/', '/login', '/api/auth/me', '/api/auth/login', '/api/hub/catalog', '/health', '/ready') or request.path.startswith('/static/')
         if not public:
             if not g.user:
                 if request.path.startswith(('/api/', '/socket.io/')) or request.path == '/metrics':

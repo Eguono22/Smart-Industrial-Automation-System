@@ -8,7 +8,6 @@
         "includeFiles": [
           "app/templates/**",
           "app/static/**",
-          "app/founder.py",
           "app/models/hub.py"
         ]
       }

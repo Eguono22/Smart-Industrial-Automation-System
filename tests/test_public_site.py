@@ -9,11 +9,13 @@ class PublicSiteTests(unittest.TestCase):
     def test_pages_need_no_database(self):
         with patch('sqlite3.connect', side_effect=AssertionError('Public site must not open SQLite')):
             client = app.test_client()
-            for path in ['/', '/founder', '/health', '/ready', '/api/hub/catalog', '/operations']:
+            for path in ['/', '/health', '/ready', '/api/hub/catalog', '/operations']:
                 with self.subTest(path=path):
                     self.assertEqual(client.get(path).status_code, 200)
             html = client.get('/').get_data(as_text=True)
-            self.assertIn('Eguonoroghene Adomi', html)
+            self.assertNotIn('Eguonoroghene Adomi', html)
+            self.assertNotIn('href="/founder"', html)
+            self.assertEqual(client.get('/founder').status_code, 404)
             self.assertIn('© 2026 SIAS Hub. All rights reserved.', html)
             self.assertNotIn('href="/login"', html)
             self.assertNotIn('href="/dashboard"', html)

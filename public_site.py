@@ -4,7 +4,6 @@ from datetime import datetime, timezone
 from urllib.parse import urlsplit
 
 from flask import Flask, jsonify, render_template
-from app.founder import FOUNDER
 from app.models.hub import CAPABILITIES, INDUSTRIES
 
 app = Flask(__name__, template_folder='app/templates', static_folder='app/static')
@@ -31,11 +30,6 @@ def response_headers(response):
 @app.route('/')
 def index():
     return render_template('index.html', industries=INDUSTRIES, capabilities=CAPABILITIES)
-
-
-@app.route('/founder')
-def founder():
-    return render_template('founder.html', founder=FOUNDER)
 
 
 @app.route('/api/hub/catalog')

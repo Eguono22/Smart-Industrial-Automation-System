@@ -12,7 +12,6 @@ from datetime import datetime, timezone
 from flask import Flask, render_template, jsonify, request, g, session
 from flask_socketio import SocketIO, emit
 
-from app.founder import FOUNDER
 from app.asset_routes import assets_bp
 from app.auth import install_auth, authenticated_user
 from app.notifications import notifications_bp
@@ -117,11 +116,6 @@ def after_request(resp):
 @app.route("/")
 def index():
     return render_template("index.html", industries=INDUSTRIES, capabilities=CAPABILITIES)
-
-
-@app.route("/founder")
-def founder():
-    return render_template("founder.html", founder=FOUNDER)
 
 
 @app.route("/api/hub/catalog")

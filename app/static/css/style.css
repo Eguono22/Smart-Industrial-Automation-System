@@ -85,26 +85,3 @@ body {
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #2e3240; border-radius: 3px; }
-
-/* Founder profile */
-.founder-page { overflow-wrap: anywhere; }
-.founder-hero {
-  background: linear-gradient(125deg, #073344 0%, #101722 55%, #102944 100%);
-}
-.founder-identity { background: linear-gradient(135deg, #1d2c3d, #073344); }
-.founder-monogram {
-  width: 112px;
-  height: 112px;
-  border: 2px solid #0dcaf0;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 3rem;
-  font-weight: 700;
-  color: #6edff6;
-}
-.founder-panel { background: #131f2c; }
-.founder-prose { line-height: 1.9; }
-.founder-collaboration { max-width: 680px; }
-.founder-page section[id] { scroll-margin-top: 1.5rem; }

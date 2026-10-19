@@ -476,22 +476,11 @@ and configured credentials also prevent accidental asset deletion. These reading
 do not feed the demo ML model, create safety alarms or drive PLC outputs.
 
 
-## Founder profile
-
-The public `/founder` page introduces Eguonoroghene Adomi, Founder & Lead
-Developer of SIAS Hub, using the biography, education, industrial background,
-mission and expertise supplied by the founder. It is linked from the home page,
-navigation and shared footer and includes profile metadata for sharing.
-Profile data lives in `app/founder.py`; the biography and page layout are in
-`app/templates/founder.html`. Collaboration links lead to the existing solution
-planner and the supplied SIAS Hub website; no unimplemented contact route is linked.
-The shared footer displays `© 2026 SIAS Hub. All rights reserved.`, scoped to
-SIAS Hub-owned material, while preserving third-party copyright notices and licenses.
 
 ## Vercel deployment scope
 
 `vercel.json` deploys `public_site.py`, a stateless public entrypoint for the
-industry hub, browser-local solution planner and founder biography. It does not
+industry hub and browser-local solution planner. It does not
 open SQLite, start the simulator, initialize user accounts or run background
 workers. `.python-version` pins the Vercel runtime to Python 3.12.
 
@@ -507,5 +496,5 @@ The Vercel team requires verified Git commits. Keep that setting enabled and
 publish through verified commits (for example GitHub's signed commit-authoring
 API or an appropriately configured local signing key). Plain unsigned `git commit`
 followed by `git push` is rejected by this team's automatic deployment policy.
-Check the Vercel deployment status and live `/health` and `/founder` after each
+Check the Vercel deployment status and live `/health` and home page after each
 release; a successful Git push alone does not establish deployment success.
