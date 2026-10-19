@@ -85,3 +85,63 @@ body {
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #2e3240; border-radius: 3px; }
+
+/* Public website: bright surfaces and readable blue accents. */
+body.sias-light {
+  --bg-card: #ffffff;
+  --border-color: #d6dfeb;
+  --text-muted-custom: #526174;
+  --bs-secondary-rgb: 82, 97, 116;
+  --bs-info-rgb: 3, 105, 161;
+  background-color: #f5f7fb !important;
+  color: #172033 !important;
+  color-scheme: light;
+}
+.sias-light .bg-dark { background-color: #ffffff !important; }
+.sias-light .border-secondary { border-color: #d6dfeb !important; }
+.sias-light .card {
+  color: #172033;
+  box-shadow: 0 4px 16px rgba(30, 58, 95, 0.045);
+}
+.sias-light header {
+  padding: 2rem !important;
+  margin-bottom: 1.5rem;
+  border: 1px solid #dbe7f4;
+  border-radius: 20px;
+  background: linear-gradient(120deg, #ffffff, #eaf3ff);
+}
+.sias-light .navbar-brand { color: #172033; }
+.sias-light .navbar-nav .nav-link { color: #40516b; }
+.sias-light .navbar-nav .nav-link:hover,
+.sias-light .navbar-nav .nav-link.active { color: #1d4ed8; }
+.sias-light .btn-primary {
+  --bs-btn-bg: #1d4ed8;
+  --bs-btn-border-color: #1d4ed8;
+  --bs-btn-hover-bg: #1e40af;
+  --bs-btn-hover-border-color: #1e40af;
+}
+.sias-light .btn-outline-info {
+  --bs-btn-color: #0369a1;
+  --bs-btn-border-color: #0369a1;
+  --bs-btn-hover-color: #ffffff;
+  --bs-btn-hover-bg: #0369a1;
+  --bs-btn-hover-border-color: #0369a1;
+  --bs-btn-active-color: #ffffff;
+  --bs-btn-active-bg: #075985;
+  --bs-btn-active-border-color: #075985;
+}
+.sias-light .btn-outline-light {
+  --bs-btn-color: #334155;
+  --bs-btn-border-color: #64748b;
+  --bs-btn-hover-color: #172033;
+  --bs-btn-hover-bg: #e2e8f0;
+  --bs-btn-hover-border-color: #64748b;
+}
+.sias-light .form-control,
+.sias-light .form-select { border-color: #bdcadb; }
+.sias-light footer { background: #ffffff; }
+.sias-light ::-webkit-scrollbar-track { background: #eef2f7; }
+.sias-light ::-webkit-scrollbar-thumb { background: #b7c5d8; }
+@media (max-width: 575px) {
+  .sias-light header { padding: 1.25rem !important; }
+}

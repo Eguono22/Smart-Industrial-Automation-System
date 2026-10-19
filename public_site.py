@@ -16,7 +16,7 @@ if operations_url:
 
 @app.context_processor
 def public_context():
-    return dict(current_user=None, csrf_token='', operations_enabled=False, operations_url=operations_url)
+    return dict(current_user=None, csrf_token='', operations_enabled=False, operations_url=operations_url, light_theme=True)
 
 
 @app.after_request
