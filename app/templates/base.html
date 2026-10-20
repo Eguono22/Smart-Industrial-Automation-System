@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="demo-mode" content="{{ '1' if classic_demo else '0' }}" />
   <meta name="csrf-token" content="{{ csrf_token }}" />
   <meta name="user-id" content="{{ current_user.id if current_user else '' }}" />
   <meta name="user-role" content="{{ current_user.role if current_user else '' }}" />
@@ -14,28 +15,34 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons.min.css') }}" />
   <!-- App CSS -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  {% if classic_demo %}<link rel="stylesheet" href="{{ url_for('static', filename='css/demo.css') }}" />{% endif %}
   {% block head %}{% endblock %}
 </head>
-<body class="{{ 'sias-light bg-light text-dark' if light_theme else 'bg-dark text-light' }} d-flex flex-column min-vh-100">
+<body class="{{ 'sias-demo ' if classic_demo else '' }}{{ 'sias-light bg-light text-dark' if light_theme else 'bg-dark text-light' }} d-flex flex-column min-vh-100">
 
 <!-- Navbar -->
 <nav class="navbar navbar-expand-lg {{ 'navbar-light bg-white' if light_theme else 'navbar-dark bg-black' }} border-bottom border-secondary shadow-sm">
   <div class="container-fluid px-3">
     <a class="navbar-brand fw-bold" href="/">
-      <i class="bi bi-cpu-fill text-primary me-2"></i>SIAS Hub
+      <i class="bi bi-cpu-fill text-primary me-2"></i>{{ 'SIAS' if classic_demo else 'SIAS Hub' }}
     </a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navMenu">
       <ul class="navbar-nav me-auto">
+        {% if classic_demo %}
+        <li class="nav-item"><a class="nav-link {% if request.path == '/dashboard' %}active{% endif %}" href="/dashboard"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link {% if request.path == '/plc-monitor' %}active{% endif %}" href="/plc-monitor"><i class="bi bi-diagram-3 me-1"></i>PLC Monitor</a></li>
+        <li class="nav-item"><a class="nav-link {% if request.path == '/maintenance' %}active{% endif %}" href="/maintenance"><i class="bi bi-tools me-1"></i>Maintenance</a></li>
+        {% else %}
         {% if current_user %}<li class="nav-item"><a class="nav-link {% if request.path == '/telemetry' %}active{% endif %}" href="/telemetry">Equipment data</a></li>{% endif %}
         {% if current_user %}<li class="nav-item"><a class="nav-link {% if request.path == '/notifications' %}active{% endif %}" href="/notifications">Notifications</a></li>{% endif %}
         {% if operations_enabled is not defined or operations_enabled %}
         <li class="nav-item"><a class="nav-link {% if request.path == '/work-orders' %}active{% endif %}" href="/work-orders">Work orders</a></li>
         <li class="nav-item"><a class="nav-link {% if request.path == '/assets' %}active{% endif %}" href="/assets">Assets</a></li>
         {% endif %}
-        <li class="nav-item"><a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">Industry Hub</a></li>
+        <li class="nav-item"><a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/industry-hub">Industry Hub</a></li>
         {% if current_user and current_user.role == 'admin' %}
         <li class="nav-item">
           <a class="nav-link {% if request.path == '/dashboard' %}active{% endif %}" href="/dashboard">
@@ -53,13 +60,15 @@
           </a>
         </li>
         {% endif %}
+        {% endif %}
       </ul>
       <div class="d-flex align-items-center gap-2 small">
+        {% if classic_demo %}<span class="badge bg-secondary">Simulation</span>{% endif %}
         {% if current_user %}
         <span>{{ current_user.name }} · {{ current_user.role }}</span>
         {% if current_user.role == 'admin' %}<a href="/users" class="btn btn-sm btn-outline-light">Users</a>{% endif %}
         <button id="logout" class="btn btn-sm btn-outline-light">Log out</button>
-        {% elif operations_enabled is not defined or operations_enabled %}<a href="/login" class="btn btn-sm btn-outline-light">Log in</a>{% elif operations_url %}<a href="{{ operations_url }}" class="btn btn-sm btn-outline-light">Operations workspace</a>{% endif %}
+        {% elif not classic_demo and (operations_enabled is not defined or operations_enabled) %}<a href="/login" class="btn btn-sm btn-outline-light">Log in</a>{% elif operations_url %}<a href="{{ operations_url }}" class="btn btn-sm btn-outline-light">Operations workspace</a>{% endif %}
         <span id="connection-badge" class="badge bg-secondary">
           <i class="bi bi-circle-fill me-1"></i>Connecting…
         </span>
@@ -76,6 +85,7 @@
 
 <footer class="border-top border-secondary mt-4 py-4">
   <div class="container small">
+    {% if classic_demo %}<p class="text-secondary mb-1">Simulation session · Controls operate software only. Session history may reset when the server restarts.</p>{% endif %}
     <p class="mb-1">© 2026 SIAS Hub. All rights reserved.</p>
     <p class="text-secondary mb-0">This notice applies to material owned by SIAS Hub. Third-party material retains its respective copyright notices and licenses.</p>
   </div>
@@ -89,6 +99,7 @@
 <script src="{{ url_for('static', filename='vendor/chart.umd.min.js') }}"></script>
 
 <script>
+  const SIAS_DEMO = document.querySelector('meta[name="demo-mode"]')?.content === '1';
   const SIAS_CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.content || '';
   const SIAS_USER_ID = Number(document.querySelector('meta[name="user-id"]')?.content || 0);
   const SIAS_ROLE = document.querySelector('meta[name="user-role"]')?.content || '';
@@ -150,7 +161,13 @@
 
   // Global SocketIO connection
   // Start with polling for fastest compatibility, then upgrade to websocket.
-  const socket = io({
+  const demoHandlers = new Map();
+  const socket = SIAS_DEMO ? {
+    on(event, handler) {
+      if (!demoHandlers.has(event)) demoHandlers.set(event, []);
+      demoHandlers.get(event).push(handler);
+    }
+  } : io({
     autoConnect: SIAS_ROLE === 'admin',
     transports: ['polling', 'websocket'],
     timeout: 8000,
@@ -173,8 +190,27 @@
     probeHealth();
   });
 
-  probeHealth();
-  setInterval(probeHealth, 10000);
+  if (SIAS_DEMO) {
+    let demoPollRunning = false;
+    async function pollDemo() {
+      if (demoPollRunning) return;
+      demoPollRunning = true;
+      try {
+        const response = await siasFetch('/api/demo/data', {cache: 'no-store'});
+        if (!response.ok) throw new Error('Simulation update failed');
+        const payload = await response.json();
+        (demoHandlers.get('data_update') || []).forEach(handler => handler(payload));
+        setConnectionBadge('live');
+      } catch (_) { setConnectionBadge('offline'); }
+      finally { demoPollRunning = false; }
+    }
+    // HTTP updates work on serverless hosts and feed the existing chart handlers.
+    setTimeout(pollDemo, 0);
+    setInterval(pollDemo, 2000);
+  } else {
+    probeHealth();
+    setInterval(probeHealth, 10000);
+  }
 </script>
 {% block scripts %}{% endblock %}
 </body>

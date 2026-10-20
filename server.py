@@ -118,6 +118,11 @@ def index():
     return render_template("index.html", industries=INDUSTRIES, capabilities=CAPABILITIES)
 
 
+@app.route("/industry-hub")
+def industry_hub():
+    return render_template("industry_hub.html", industries=INDUSTRIES, capabilities=CAPABILITIES)
+
+
 @app.route("/api/hub/catalog")
 def api_hub_catalog():
     return jsonify({"industries": INDUSTRIES, "capabilities": CAPABILITIES})

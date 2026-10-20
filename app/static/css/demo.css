@@ -1,0 +1,6 @@
+/* Original SIAS control-room layout with readable dark cards and mobile tables. */
+.sias-demo .card { color: #d0d8e8; }
+.sias-demo .text-secondary { color: #9ca8ba !important; }
+.sias-demo #alarm-table-wrapper,
+.sias-demo #alarm-log-wrapper { overflow-x: auto; }
+.sias-demo .navbar-brand { letter-spacing: 2px; }

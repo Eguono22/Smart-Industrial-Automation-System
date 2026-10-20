@@ -4,6 +4,8 @@ Uses an Isolation Forest trained on engineered rolling-window sensor features.
 Provides model persistence and basic data-drift monitoring.
 """
 
+from __future__ import annotations
+
 import os
 import pickle
 from collections import deque
@@ -42,7 +44,7 @@ SENSOR_WEIGHTS = {
 class PredictiveMaintenanceEngine:
     """Trains an IsolationForest online and scores incoming sensor data."""
 
-    def __init__(self):
+    def __init__(self, persist=True):
         self._model = None
         self._scaler = MinMaxScaler() if SKLEARN_AVAILABLE else None
         self._train_buffer: deque = deque(maxlen=TRAIN_BUFFER_SIZE)
@@ -59,7 +61,9 @@ class PredictiveMaintenanceEngine:
         self._drift_score = 0.0
         self._drift_detected = False
         self._model_path = os.environ.get("SIAS_MODEL_PATH", os.path.join("instance", "predictor_model.pkl"))
-        self._load_model()
+        self._persist_enabled = persist
+        if persist:
+            self._load_model()
 
     def update(self, sensor_data: dict) -> dict:
         raw_row = self._extract_raw(sensor_data)
@@ -237,6 +241,8 @@ class PredictiveMaintenanceEngine:
         return recs
 
     def _save_model(self):
+        if not self._persist_enabled:
+            return
         if not self._trained or self._model is None or self._scaler is None:
             return
         try:

@@ -6,9 +6,10 @@
       "use": "@vercel/python",
       "config": {
         "includeFiles": [
+          "demo_app.py",
           "app/templates/**",
           "app/static/**",
-          "app/models/hub.py"
+          "app/models/**"
         ]
       }
     }

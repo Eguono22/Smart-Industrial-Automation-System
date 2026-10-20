@@ -479,22 +479,21 @@ do not feed the demo ML model, create safety alarms or drive PLC outputs.
 
 ## Vercel deployment scope
 
-`vercel.json` deploys `public_site.py`, a stateless public entrypoint for the
-industry hub and browser-local solution planner. It does not
-open SQLite, start the simulator, initialize user accounts or run background
-workers. `.python-version` pins the Vercel runtime to Python 3.12.
+`vercel.json` deploys `public_site.py`, which runs the original interactive SIAS
+simulator: the application home, Live Dashboard, PLC Monitor and Maintenance.
+Two-second HTTP updates keep gauges, charts and PLC state current on Vercel.
+Controls operate software simulation only; no physical PLC connection is possible
+in this public deployment. `.python-version` pins Python 3.12.
 
-The full operations application remains available through `python app.py` or the
-Dockerfile on hosting with a durable writable database volume. Vercel's local
-filesystem does not provide durable shared SQLite storage; do not point the
-operations database at `/tmp` to simulate persistence. Public-site requests cannot
-create users, assets or equipment records. Operational links are hidden unless
-`SIAS_OPERATIONS_URL` is configured with the HTTPS URL of a separately hosted
-workspace. Existing operational bookmarks display a workspace information page.
+Each browser session has isolated, temporary in-memory machine state. No SQLite
+or persistent model files are used. Cold starts, instance changes, inactivity or
+cache eviction may reset the simulation and its history. This is a working demo,
+not durable customer data storage. See [the runtime guide](docs/vercel_simulation.md).
 
-The Vercel team requires verified Git commits. Keep that setting enabled and
-publish through verified commits (for example GitHub's signed commit-authoring
-API or an appropriately configured local signing key). Plain unsigned `git commit`
-followed by `git push` is rejected by this team's automatic deployment policy.
-Check the Vercel deployment status and live `/health` and home page after each
-release; a successful Git push alone does not establish deployment success.
+The full account-based operations app still runs with `python app.py` or Docker
+on hosting with durable storage. The industry catalog is retained at
+`/industry-hub` in that authenticated application.
+
+Vercel requires verified commits. Publish through GitHub's signed commit API or a
+properly configured signing key; do not disable commit verification. Check the
+live `/ready` endpoint and all four application screens after each release.
