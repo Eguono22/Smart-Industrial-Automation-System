@@ -485,10 +485,11 @@ Two-second HTTP updates keep gauges, charts and PLC state current on Vercel.
 Controls operate software simulation only; no physical PLC connection is possible
 in this public deployment. `.python-version` pins Python 3.12.
 
-Each browser session has isolated, temporary in-memory machine state. No SQLite
-or persistent model files are used. Cold starts, instance changes, inactivity or
-cache eviction may reset the simulation and its history. This is a working demo,
-not durable customer data storage. See [the runtime guide](docs/vercel_simulation.md).
+Each browser session has isolated machine state. Small JSON control snapshots
+are carried in the signed browser session to preserve controls across workers;
+configure a stable sensitive SECRET_KEY in Vercel. No SQLite or persistent model
+files are used. History and ML training may reset on instance changes, inactivity
+or cache eviction. This is a working demo, not durable customer data storage. See [the runtime guide](docs/vercel_simulation.md).
 
 The full account-based operations app still runs with `python app.py` or Docker
 on hosting with durable storage. The industry catalog is retained at

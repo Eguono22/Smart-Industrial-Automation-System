@@ -54,6 +54,22 @@ class PublicSiteTests(unittest.TestCase):
         self.assertTrue(other.get('/api/plc/status').get_json()['coils']['motor_run']['state'])
         self.assertFalse(self.client.get('/api/plc/status').get_json()['coils']['motor_run']['state'])
 
+    def test_controls_survive_worker_changes_with_shared_signing_secret(self):
+        self.post('/api/plc/stop')
+        cookie = self.client.get_cookie('session').value
+        other_app = create_demo_app()
+        other_app.config.update(TESTING=True, SECRET_KEY=self.app.secret_key, SESSION_COOKIE_SECURE=False)
+        other = other_app.test_client()
+        other.set_cookie('session', cookie)
+        status = other.get('/api/plc/status').get_json()
+        self.assertFalse(status['coils']['motor_run']['state'])
+        self.post('/api/plc/estop')
+        other.set_cookie('session', self.client.get_cookie('session').value)
+        status = other.get('/api/plc/status').get_json()
+        self.assertTrue(status['coils']['estop_latch']['state'])
+        self.assertFalse(status['coils']['motor_run']['state'])
+        self.assertLess(len(self.client.get_cookie('session').value), 3800)
+
     def test_commands_require_csrf_and_validate_input(self):
         self.assertEqual(self.client.post('/api/plc/stop').status_code, 403)
         self.assertEqual(self.post('/api/plc/monitor/command', {'command': 'bogus'}).status_code, 400)

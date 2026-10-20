@@ -1,5 +1,6 @@
 """Original SIAS application, isolated simulation sessions for serverless hosting."""
 import math
+import copy
 import os
 import secrets
 import threading
@@ -24,6 +25,7 @@ class DemoMachine:
         self.last_tick = 0
         self.last_seen = time.monotonic()
         self.payload = None
+        self.revision = 0
 
     def refresh(self, force=False):
         now = time.monotonic()
@@ -33,7 +35,38 @@ class DemoMachine:
             self.payload = dict(sensors=sensors, plc=self.plc.get_status(),
                                 prediction=self.predictor.update(sensors), demo=self.sensor.get_demo_status())
             self.last_tick = now
+            self.revision = time.time_ns()
         return self.payload
+
+
+    def snapshot(self):
+        """Small, JSON-only control state; never serialize models or executable objects."""
+        controller = self.plc._plc
+        return copy.deepcopy(dict(revision=self.revision,
+            sensor={key: getattr(self.sensor, key) for key in (
+                '_values', '_drift', '_fault_active', '_fault_sensor', '_machine_running',
+                '_tick', '_demo_active', '_demo_step')},
+            contacts={key: value['state'] for key, value in controller._contacts.items()},
+            coils={key: value['state'] for key, value in controller._coils.items()},
+            machine_running=controller._machine_running, plc_tick=controller._tick,
+            active_alarms=controller._active_alarms))
+
+    def restore(self, snapshot):
+        # The signed Flask session is the source; only fixed fields are restored.
+        controller = self.plc._plc
+        for key in ('_values', '_drift', '_fault_active', '_fault_sensor', '_machine_running',
+                    '_tick', '_demo_active', '_demo_step'):
+            setattr(self.sensor, key, copy.deepcopy(snapshot['sensor'][key]))
+        for key in controller._contacts:
+            controller._contacts[key]['state'] = snapshot['contacts'][key]
+        for key in controller._coils:
+            controller._coils[key]['state'] = snapshot['coils'][key]
+        controller._machine_running = snapshot['machine_running']
+        controller._tick = snapshot['plc_tick']
+        controller._active_alarms = copy.deepcopy(snapshot['active_alarms'])
+        self.revision = snapshot['revision']
+        self.last_tick = 0
+        self.payload = None
 
 
 def create_demo_app():
@@ -66,6 +99,11 @@ def create_demo_app():
                 if len(machines) >= 32:
                     del machines[min(machines, key=lambda item: machines[item].last_seen)]
                 machines[key] = DemoMachine()
+            snapshot = session.get('machine_state')
+            machine = machines[key]
+            if snapshot and (machine.payload is None or snapshot['revision'] > machine.revision):
+                with machine.lock:
+                    machine.restore(snapshot)
             g.machine = machines[key]
             g.machine.last_seen = now
 
@@ -75,6 +113,9 @@ def create_demo_app():
 
     @app.after_request
     def headers(response):
+        if g.get('machine') is not None and request.path.startswith('/api/') and response.status_code < 400:
+            with g.machine.lock:
+                session['machine_state'] = g.machine.snapshot()
         response.headers['Cache-Control'] = 'no-store'
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-Frame-Options'] = 'DENY'

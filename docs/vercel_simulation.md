@@ -24,9 +24,13 @@ configuration; it cannot connect to or operate real equipment. It does not expos
 account, customer, asset or gateway-write endpoints and never opens SQLite.
 Predictive-model persistence is disabled for simulation sessions.
 
-Session state and recent history live only in function memory. They may reset on
-cold starts, instance changes, an hour of inactivity, or eviction from the bounded
-32-session cache. They are not durable production records. The backend samples at
+Recent history and ML training live in function memory and may reset on cold
+starts, instance changes, an hour of inactivity, or eviction from the bounded
+32-session cache. Small JSON-only sensor/control snapshots travel in the signed
+browser session so stop, emergency-stop and fault state survive worker changes.
+Configure a stable secret SECRET_KEY in Vercel production; the value is stored in
+Vercel's sensitive environment settings, never in the repository. These snapshots
+are not durable production records and contain no executable model data. The backend samples at
 most once every two seconds per active session; control actions trigger an
 immediate scan. The ML engine trains as enough session samples accumulate.
 
