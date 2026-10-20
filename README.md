@@ -1,80 +1,154 @@
-# Smart Industrial Automation System (SIAS)
+# Smart Industrial Automation System
 
-Predictive maintenance system for an industrial machine using sensor data and PLC logic.
+**SIAS** is a simulation-first industrial monitoring and maintenance application. It brings sensor telemetry, PLC-style control logic, anomaly detection, and asset work management together in one web interface.
 
-## Overview
+Use SIAS to explore a repeatable machine-health scenario, manage a customer and asset registry, or send readings from an existing gateway to an asset-specific HTTP endpoint.
 
-SIAS is a full-stack web application that combines **PLC ladder logic simulation**, **real-time sensor analytics** and an **ML-based anomaly detection engine** to keep industrial machines running safely and efficiently.
+> **Scope:** The built-in machine and its sensor readings are simulated. SIAS is a demonstration and development system, not a safety-rated controller or a substitute for qualified engineering, commissioning, or validation. The optional Modbus bridge mirrors configured outputs; it does not make this application a certified control system.
+
+## At a glance
+
+| Capability | What it provides |
+|---|---|
+| **Live machine monitoring** | Simulated temperature, pressure, vibration, current, RPM, and oil-level readings, with live charts and status indicators |
+| **PLC logic demonstration** | Five ladder-logic rungs, interlocks, alarm handling, and an optional Modbus TCP output bridge |
+| **Predictive maintenance demo** | Isolation Forest anomaly scoring, rolling features, online retraining, and a persisted model checkpoint |
+| **Repeatable scenario** | A bearing-overheat walkthrough from healthy baseline through alarm and PLC response |
+| **Asset operations** | Customer, site, and asset registry; work orders; technician assignment; and maintenance history |
+| **Gateway telemetry** | Authenticated, asset-scoped HTTP ingestion and recent reading history |
+| **Access management** | Session-based accounts, customer scoping, role-based permissions, and CSRF protection |
+| **Operations support** | Health and readiness endpoints, Docker deployment, and an optional SMTP notification worker |
+
+## Screenshots
+
+| Industry Hub | Live Dashboard |
+|---|---|
+| ![SIAS industry hub](https://github.com/user-attachments/assets/9b6cb32e-d223-4c2b-b3c4-e2c10560749a) | ![SIAS live dashboard](https://github.com/user-attachments/assets/0b82aacf-f743-40b7-873f-22ccf555a423) |
+
+| PLC Monitor | Predictive Maintenance |
+|---|---|
+| ![SIAS PLC monitor](https://github.com/user-attachments/assets/5601468b-c275-4848-8fb1-0ecb2a1a2525) | ![SIAS predictive maintenance](https://github.com/user-attachments/assets/4597d352-a2fb-44a2-b62d-497352930518) |
+
+## Contents
+
+- [Features](#features)
+- [Screenshots](#screenshots)
+- [Technology](#technology)
+- [Project structure](#project-structure)
+- [Getting started](#getting-started)
+- [Configuration](#configuration)
+- [Tests and demo](#tests-and-demo)
+- [Docker and operations](#docker-and-operations)
+- [PLC ladder logic](#plc-ladder-logic)
+- [Industry hub and solution planning](#sias-hub-industries-and-solution-planning)
+- [Customer, site, and asset registry](#customer-site-and-asset-registry)
+- [Maintenance work orders](#maintenance-work-orders)
+- [Accounts and customer access](#accounts-and-customer-access)
+- [Email notifications](#assignment-and-overdue-email-alerts)
+- [Equipment gateway telemetry](#equipment-gateway-telemetry)
+- [Vercel deployment scope](#vercel-deployment-scope)
 
 ## Features
 
-| Area | Details |
-|---|---|
-| **Sensor Monitoring** | Temperature, Pressure, Vibration, Current, RPM, Oil Level — simulated with realistic drift and noise |
-| **PLC Integration** | Built-in simulation plus optional Modbus TCP bridge (`PLC_MODE=modbus`) for real PLC output-coil mirroring |
-| **PLC Ladder Logic** | 5 rungs: Motor Run, Coolant Pump, Lube Pump, Pressure Relief, Alarm Horn — with interlocks and safety latches |
-| **Predictive ML** | Isolation Forest with rolling-window engineered features, online retraining, drift score and persisted model checkpoint |
-| **Live Dashboard** | Real-time sensor gauges, trend charts (Chart.js), health history and anomaly score charts — updated every 2 s via Socket.IO |
-| **PLC Monitor** | Ladder rung diagram, input contact and output coil tables, scan-tick counter, alarm log |
-| **Maintenance Page** | Health trend, anomaly trend, full sensor status table and complete alarm history |
-| **Machine Controls** | Start / Stop / Emergency Stop / Reset E-Stop via REST API |
-| **Fault Injection** | Inject or clear artificial sensor faults for demo / testing |
-| **Deterministic Demo Scenario** | Repeatable bearing-overheat sequence: vibration warning, critical fault, thermal trip, PLC safety response |
-| **Alarm Management** | Per-sensor alarms with priority levels (critical / warning / info) and ACK support |
-| **Production Hardening** | Account sessions, roles, customer access controls and CSRF protection, `/health` + `/ready` + `/metrics`, Dockerfile and GitHub Actions CI |
+### Machine monitoring and control
 
-## Tech Stack
+- Six simulated sensor channels with fault injection and live dashboard updates.
+- Five PLC-style logic rungs for motor run, coolant pump, lubrication, pressure relief, and alarm horn.
+- Start, stop, emergency-stop, and reset controls, with interlocks and alarm acknowledgement.
+- Optional Modbus TCP output mirroring, configured through environment variables.
 
-- **Backend** — Python 3.12, Flask 3, Flask-SocketIO (threading mode)
-- **ML** — scikit-learn `IsolationForest`, `MinMaxScaler`
-- **PLC Bridge** — `pymodbus` (optional; enabled via env vars)
-- **Frontend** — Bootstrap 5, Chart.js 4, Socket.IO client (all vendored, no CDN required)
-- **Transport** — WebSocket with HTTP polling fallback
+### Predictive maintenance
 
-## Project Structure
+- Isolation Forest anomaly scoring with rolling-window features and a persisted model checkpoint.
+- Health and anomaly trends, sensor status, and alarm history.
+- A deterministic bearing-overheat scenario for demos and validation.
+
+### Asset and maintenance operations
+
+- Customer, site, and asset registry with customer-scoped access.
+- Asset-linked work orders, technician assignments, completion notes, and change history.
+- Optional email notifications through a separate SMTP worker.
+- Device credentials and asset-scoped HTTP ingestion for gateway-generated readings.
+
+### Administration and operations
+
+- Admin, manager, technician, and viewer roles with server-side authorization.
+- Session-based authentication, CSRF protection, and account administration.
+- `/health`, `/ready`, and `/metrics` endpoints, plus Docker support.
+
+## Technology
+
+- **Runtime:** Python 3.12, Flask 3, Flask-SocketIO
+- **Machine learning:** scikit-learn (`IsolationForest`, `MinMaxScaler`)
+- **PLC bridge:** pymodbus (optional)
+- **Frontend:** Bootstrap 5, Chart.js 4, Socket.IO client; browser assets are vendored
+- **Persistence:** SQLite
+- **Realtime transport:** Socket.IO with HTTP polling fallback
+
+## Project structure
 
 ```
-├── app.py                  # Flask application & REST/WebSocket endpoints
+├── app.py                  # Local development entry point
+├── server.py               # Operational Flask application
+├── public_site.py          # Stateless public site entry point
 ├── requirements.txt
 ├── app/
+│   ├── auth.py             # Account sessions and authorization
+│   ├── asset_routes.py     # Registry and asset routes
+│   ├── telemetry.py        # Asset telemetry ingestion and history
+│   ├── notifications.py    # Notification APIs and worker support
 │   ├── models/
-│   │   ├── sensor.py       # Sensor simulator (6 sensors, fault injection)
-│   │   ├── plc.py          # PLC ladder-logic, alarm management
-│   │   ├── plc_adapter.py  # Simulation + Modbus PLC integration adapter
-│   │   └── predictor.py    # Predictive engine + model persistence + drift
+│   │   ├── sensor.py       # Sensor simulation and fault injection
+│   │   ├── plc.py          # PLC logic and alarm management
+│   │   ├── plc_adapter.py  # Simulation and Modbus adapter
+│   │   ├── predictor.py    # Anomaly prediction and model persistence
+│   │   ├── assets.py       # Customer, site, asset, and work-order data
+│   │   └── hub.py          # Industry and capability catalog
 │   ├── templates/
-│   │   ├── base.html       # Shared navbar + script includes
-│   │   ├── index.html      # Landing page
-│   │   ├── dashboard.html  # Live monitoring dashboard
-│   │   ├── plc_monitor.html# PLC ladder logic viewer
-│   │   └── maintenance.html# Predictive maintenance page
+│   │   └── ...             # Hub, dashboard, assets, work orders, and admin pages
 │   └── static/
-│       ├── css/style.css
-│       ├── js/dashboard.js
-│       ├── js/plc_monitor.js
-│       ├── js/maintenance.js
-│       └── vendor/         # Bootstrap, Chart.js, Socket.IO (no CDN)
-└── tests/
-    └── test_core.py        # 44 unit tests (pytest)
+│       ├── css/            # Application styles
+│       ├── js/             # Page-specific scripts
+│       └── vendor/         # Bootstrap, Chart.js, and Socket.IO
+├── scripts/                # Admin, demo, telemetry, and notification tools
+├── docs/                   # Demo walkthrough
+└── tests/                  # Pytest suite
 ```
 
-## Quick Start
+## Getting started
+
+### Requirements
+
+- Python 3.12
+- pip
+- A modern web browser
+
+### Run locally
 
 ```bash
-# 1. Install dependencies
-pip install -r requirements.txt
+# Create and activate a virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
 
-# 2. Create your first administrator (interactive password prompt)
+# Install dependencies
+python -m pip install -r requirements.txt
+
+# Create the first administrator (prompts for a password)
 python scripts/manage_users.py
 
-# 3. Run the application
+# Start the application
 python app.py
-
-# 4. Open browser and log in
-open http://localhost:5000
 ```
 
-## Environment Variables
+Open [http://localhost:5000](http://localhost:5000) and sign in with the administrator account you created. The default SQLite database is created at `instance/sias.sqlite3`.
+
+On Windows PowerShell, activate the virtual environment with:
+
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+## Configuration
 
 | Variable | Default | Description |
 |---|---|---|
@@ -93,13 +167,13 @@ open http://localhost:5000
 | `SECRET_KEY` | generated and stored in SQLite | Optional session-signing secret override |
 | `SIAS_COOKIE_SECURE` | `0` | Set `1` for HTTPS deployments to require secure session cookies |
 
-## Running Tests
+## Tests and demo
 
 ```bash
 python -m pytest tests/ -v
 ```
 
-## Deterministic Demo
+### Deterministic demo
 
 Use the **Scenario Demo** controls on the dashboard, or call the API directly:
 
@@ -134,20 +208,20 @@ This gives a repeatable end-to-end maintenance story: normal operation, early wa
 
 See [docs/demo_walkthrough.md](docs/demo_walkthrough.md) for a presentation-ready walkthrough.
 
-## Docker
+## Docker and operations
 
 ```bash
 docker build -t sias .
 docker run --rm -p 5000:5000 sias
 ```
 
-## Ops Endpoints
+### Operations endpoints
 
 - `GET /health` - liveness
 - `GET /ready` - readiness + PLC/model readiness details (includes active `coil_map` in Modbus mode)
 - `GET /metrics` - basic request and uptime metrics
 
-## Smoke Test
+### Smoke test
 
 ```powershell
 # GET checks only
@@ -257,7 +331,7 @@ gateway. Registered assets remain independent of the single-machine simulation.
 ## Maintenance work orders
 
 Open **Work orders** (`/work-orders`) to create maintenance tasks for registered
-assets. Tasks include title, description, priority, optional assignee name, required
+assets. Tasks include title, description, priority, optional technician assignment, required
 due date, status and completion notes. Filter by asset to review its maintenance
 history, search by task/customer/assignee, filter by status or show overdue tasks.
 Overdue means a due date before the current UTC date while open or in progress;
@@ -270,10 +344,11 @@ Each actual change appends a timestamped snapshot in the same SQLite transaction
 Work orders remain attached to their original asset and cannot be deleted through
 the API; cancel unwanted tasks instead. Assets with work orders cannot be deleted.
 Assignments use registered technicians belonging to the asset customer. Older
-free-text assignments are preserved until reassigned. Email notifications are available through the optional SMTP worker. Work order
-status does not change asset status or machine controls. New history entries record the authenticated actor. Older entries retain an
-unknown actor rather than inferring an identity.
-
+free-text assignments are preserved until reassigned. Email notifications are
+available through the optional SMTP worker. Work-order status does not change
+asset status or machine controls. New history entries record the authenticated
+actor; older entries retain an unknown actor rather than inferring an identity.
+docker exec -it sias-local python scripts/manage_users.py
 Work orders use the existing `SIAS_DATABASE_PATH` database and automatically add
 their tables to existing installations without replacing registry data:
 

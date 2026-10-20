@@ -146,7 +146,19 @@ body.sias-light {
   .sias-light header { padding: 1.25rem !important; }
 }
 
-/* Repository screenshots: preserve complete frames and open full-size on selection. */
+/* Demo previews link visitors directly to the corresponding workspace page. */
+.sias-light .demo-card {
+  color: #172033;
+  background: #ffffff;
+  border-color: #d6dfeb;
+  box-shadow: 0 8px 24px rgba(30, 58, 95, 0.07);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+.sias-light .demo-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 32px rgba(30, 58, 95, 0.12);
+}
+.sias-light .demo-card h3 { color: #172033; }
 .screenshot-image {
   display: block;
   width: 100%;
