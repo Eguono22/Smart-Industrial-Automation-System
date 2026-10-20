@@ -34,11 +34,23 @@ are not durable production records and contain no executable model data. The bac
 most once every two seconds per active session; control actions trigger an
 immediate scan. The ML engine trains as enough session samples accumulate.
 
+## Operations modules
+
+The Operations dropdown leaves the original four screens in place and adds an
+overview at `/operations`. Customers/sites/assets, work orders, telemetry,
+notifications and user access have searchable sample tables at
+`/operations/<module>`. These are explicitly labeled example previews: there is no
+record creation, account management or notification delivery in the public demo.
+The industry catalog and browser-local solution planner are available at
+`/industry-hub`, including capability selection and JSON export.
+
 The full account-based operations application remains in `server.py` and runs via
-`python app.py` or Docker on a host with durable database storage. The former
-industry catalog and solution planner are retained in `industry_hub.html`, exposed
-at `/industry-hub` in that authenticated application, away from the simulator's
-primary navigation.
+`python app.py` or Docker on a host with durable database storage. Its Operations
+menu opens the existing persistent modules with the same account/customer scopes;
+only administrators can open user administration. Set `SIAS_OPERATIONS_URL` on the
+Vercel simulator to that workspace's HTTPS URL to show links to its modules. Leave
+it empty when no full workspace is connected. URLs with credentials, queries or
+fragments are rejected.
 
 ## Release validation
 
@@ -47,4 +59,5 @@ exercise start, stop, emergency stop, fault injection and alarm acknowledgement.
 Confirm separate browser sessions do not share controls. Use GitHub-verified
 commits for deployment; keep Vercel's required signature verification enabled.
 After the deployment is Ready, check `/ready` for `mode: simulation` and verify
-that chart values and the PLC scan tick update in the browser.
+that chart values and the PLC scan tick update in the browser. Check the Operations
+dropdown on desktop and mobile, sample-table search, and industry-plan export.

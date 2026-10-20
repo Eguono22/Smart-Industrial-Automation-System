@@ -112,7 +112,7 @@ def install_auth(app):
                 if request.path.startswith(('/api/', '/socket.io/')) or request.path == '/metrics':
                     return jsonify(ok=False, error='Login required'), 401
                 return redirect('/login')
-            tenant_routes = request.path in ('/assets', '/work-orders', '/notifications', '/telemetry') or request.path.startswith(('/api/registry', '/api/work-orders', '/api/auth', '/api/notifications', '/api/telemetry'))
+            tenant_routes = request.path in ('/assets', '/work-orders', '/notifications', '/telemetry', '/operations', '/industry-hub') or request.path.startswith(('/api/registry', '/api/work-orders', '/api/auth', '/api/notifications', '/api/telemetry', '/operations/'))
             if not tenant_routes and g.user['role'] != 'admin':
                 return jsonify(ok=False, error='Administrator access required'), 403
         if request.method in ('POST', 'PATCH', 'PUT', 'DELETE'):

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}SIAS – {{ module.name }}{% endblock %}
+{% block content %}
+<div class="container py-3">
+  <a href="/operations" class="text-info text-decoration-none small"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Operations overview</a>
+  <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mt-3 mb-4"><div><h1 class="h3"><i class="bi bi-{{ module.icon }} me-2 text-info" aria-hidden="true"></i>{{ module.name }}</h1><p class="text-secondary mb-0">{{ module.description }}</p></div><span class="badge bg-secondary">Example preview</span></div>
+  <div class="alert alert-secondary" role="note"><strong>Example records only.</strong> Search the sample table to explore this module. Creating records, managing accounts and sending notifications are available in the full operations workspace.</div>
+  {% if operations_url %}<a href="{{ operations_url ~ module.path }}" class="btn btn-primary mb-4">Open {{ module.name }} in full workspace</a>{% endif %}
+  <div class="card text-light p-3 p-md-4">
+    <label for="module-search" class="form-label">Search example records</label><input id="module-search" type="search" class="form-control bg-dark text-light border-secondary mb-2" placeholder="Search names, equipment, status or roles…">
+    <p id="module-count" class="small text-secondary mb-3" aria-live="polite">{{ module.rows|length }} example records</p>
+    <div class="table-responsive"><table class="table table-dark table-hover align-middle"><caption class="text-secondary">{{ module.name }} · illustrative examples, not live operations data</caption><thead><tr>{% for column in module.columns %}<th scope="col">{{ column }}</th>{% endfor %}</tr></thead><tbody id="module-rows">{% for row in module.rows %}<tr>{% for value in row %}<td>{{ value }}</td>{% endfor %}</tr>{% endfor %}</tbody></table></div>
+    <p id="module-empty" class="text-secondary" hidden>No example records match your search.</p>
+  </div>
+  {% if module.id == 'telemetry' %}<a href="/dashboard" class="btn btn-outline-info mt-4">View live simulator readings</a>{% endif %}
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/operations.js') }}"></script>{% endblock %}

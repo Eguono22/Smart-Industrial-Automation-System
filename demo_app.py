@@ -8,6 +8,8 @@ import time
 from datetime import datetime, timezone
 
 from flask import Flask, g, jsonify, render_template, request, session
+from app.operations import operations_bp
+from app.models.hub import CAPABILITIES, INDUSTRIES
 from app.models.sensor import SensorSimulator, SENSORS
 from app.models.plc_adapter import SimulatedPLCAdapter
 from app.models.predictor import PredictiveMaintenanceEngine
@@ -74,6 +76,8 @@ def create_demo_app():
     app.config.update(SECRET_KEY=os.environ.get('SECRET_KEY') or secrets.token_hex(32),
                       SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax',
                       SESSION_COOKIE_SECURE=os.environ.get('VERCEL') == '1', MAX_CONTENT_LENGTH=16384)
+    app.config['OPERATIONS_PREVIEW'] = True
+    app.register_blueprint(operations_bp)
     machines, machines_lock = {}, threading.Lock()
     app.extensions['demo_machines'] = machines
 
@@ -81,7 +85,7 @@ def create_demo_app():
     def load_machine():
         if request.path.startswith('/static/') or request.path in ('/health', '/ready'):
             return
-        if request.path not in ('/', '/dashboard', '/plc-monitor', '/maintenance') and not request.path.startswith('/api/'):
+        if request.path not in ('/', '/dashboard', '/plc-monitor', '/maintenance', '/industry-hub', '/operations') and not request.path.startswith(('/api/', '/operations/')):
             return
         if request.method in ('POST', 'PUT', 'PATCH', 'DELETE'):
             expected = session.get('csrf')
@@ -137,6 +141,11 @@ def create_demo_app():
     @app.route('/maintenance')
     def maintenance():
         return render_template('maintenance.html')
+
+    @app.route('/industry-hub')
+    def industry_hub():
+        return render_template('industry_hub.html', industries=INDUSTRIES,
+                               capabilities=CAPABILITIES, operations_enabled=False)
 
     @app.route('/health')
     @app.route('/ready')

@@ -48,6 +48,44 @@ class PublicSiteTests(unittest.TestCase):
         self.post('/api/plc/start')
         self.assertTrue(self.client.get('/api/plc/status').get_json()['coils']['motor_run']['state'])
 
+    def test_operations_previews_do_not_open_customer_database(self):
+        with patch('sqlite3.connect', side_effect=AssertionError('Preview must not open SQLite')):
+            overview = self.client.get('/operations').get_data(as_text=True)
+            self.assertIn('Workspace preview', overview)
+            self.assertIn('not connected to this deployment yet', overview)
+            for module in ['assets', 'work-orders', 'telemetry', 'notifications', 'users']:
+                response = self.client.get('/operations/' + module)
+                self.assertEqual(response.status_code, 200, module)
+                html = response.get_data(as_text=True)
+                self.assertIn('Example records only.', html)
+                self.assertIn('id="module-search"', html)
+                self.assertNotIn('type="password"', html)
+            self.assertEqual(self.client.get('/operations/unknown').status_code, 404)
+        self.assertEqual(self.client.get('/api/registry').status_code, 404)
+
+    def test_operations_navigation_preserves_machine_state_and_industry_planning(self):
+        self.post('/api/plc/stop')
+        html = self.client.get('/operations/assets').get_data(as_text=True)
+        for path in ['/dashboard', '/plc-monitor', '/maintenance']:
+            self.assertIn('href="' + path + '"', html)
+        self.assertFalse(self.client.get('/api/plc/status').get_json()['coils']['motor_run']['state'])
+        response = self.client.get('/operations/industries')
+        self.assertEqual(response.location, '/industry-hub')
+        html = self.client.get('/industry-hub').get_data(as_text=True)
+        self.assertIn('id="plan-export"', html)
+        self.assertIn('href="/dashboard"', html)
+        self.assertNotIn('href="/assets"', html)
+        self.assertEqual(self.client.get('/static/js/operations.js').status_code, 200)
+
+    def test_optional_operations_workspace_links_require_clean_https_url(self):
+        with patch.dict('os.environ', {'SIAS_OPERATIONS_URL': 'https://workspace.example.test/'}):
+            html = self.client.get('/operations/assets').get_data(as_text=True)
+            self.assertIn('href="https://workspace.example.test/assets"', html)
+        for value in ['http://workspace.example.test', 'https://user:pass@example.test', 'https://example.test?token=private']:
+            with patch.dict('os.environ', {'SIAS_OPERATIONS_URL': value}):
+                with self.assertRaises(ValueError):
+                    self.client.get('/operations')
+
     def test_simulator_is_isolated_between_browsers(self):
         self.post('/api/plc/stop')
         other = self.app.test_client()

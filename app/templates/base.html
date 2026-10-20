@@ -26,7 +26,7 @@
     <a class="navbar-brand fw-bold" href="/">
       <i class="bi bi-cpu-fill text-primary me-2"></i>{{ 'SIAS' if classic_demo else 'SIAS Hub' }}
     </a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu" aria-controls="navMenu" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navMenu">
@@ -61,6 +61,14 @@
         </li>
         {% endif %}
         {% endif %}
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle {% if request.path.startswith('/operations') or request.path == '/industry-hub' %}active{% endif %}" href="/operations" id="operations-menu" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-grid me-1" aria-hidden="true"></i>Operations</a>
+          <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="operations-menu">
+            <li><a class="dropdown-item" href="/operations">Operations overview</a></li>
+            {% if operations_modules %}<li><hr class="dropdown-divider"></li>{% endif %}
+            {% for module in operations_modules %}<li><a class="dropdown-item" href="{{ '/operations/' ~ module.id if operations_preview else module.path }}"><i class="bi bi-{{ module.icon }} me-2" aria-hidden="true"></i>{{ module.name }}</a></li>{% endfor %}
+          </ul>
+        </li>
       </ul>
       <div class="d-flex align-items-center gap-2 small">
         {% if classic_demo %}<span class="badge bg-secondary">Simulation</span>{% endif %}

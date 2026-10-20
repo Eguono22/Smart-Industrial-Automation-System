@@ -6,7 +6,10 @@
     <span class="badge bg-primary mb-3">SIAS HUB · INDUSTRIES & SOLUTIONS</span>
     <h1 class="display-5 fw-bold">Connect your assets.<br>Plan smarter operations.</h1>
     <p class="lead text-secondary col-lg-9">Explore industry use cases, identify potential customer segments and build a solution plan around monitoring, maintenance and automation.</p>
-    {% if operations_enabled is not defined or operations_enabled %}
+    {% if classic_demo %}
+    <div class="d-flex flex-wrap gap-2"><a class="btn btn-primary" href="#planner">Build a solution plan</a><a class="btn btn-outline-info" href="/operations">Operations overview</a></div>
+    <p class="small text-secondary mt-3">Industry profiles describe potential applications, not existing customers. Plans are saved in this browser. Customer records and account management require the full operations workspace.</p>
+    {% elif operations_enabled is not defined or operations_enabled %}
     <div class="d-flex flex-wrap gap-2"><a class="btn btn-primary" href="/assets">Manage customers &amp; assets</a><a class="btn btn-outline-primary" href="/dashboard">Open live demo</a><a class="btn btn-outline-info" href="/plc-monitor">PLC monitor</a><a class="btn btn-outline-warning" href="/maintenance">Maintenance</a><a class="btn btn-outline-light" href="#planner">Build a solution plan</a></div>
     <p class="small text-secondary mt-3">The live demo monitors one simulated machine. Industry profiles describe potential applications, not deployed solutions or existing customers.</p>
     {% else %}
@@ -26,7 +29,7 @@
         <h2 id="screenshots-heading" class="mt-1 mb-2">See SIAS in action</h2>
         <p class="text-secondary mb-0">Explore the machine dashboard, PLC controls, and predictive maintenance workflow.</p>
       </div>
-      {% if operations_enabled is not defined or operations_enabled %}
+      {% if classic_demo or operations_enabled is not defined or operations_enabled %}
       <a class="btn btn-primary" href="/dashboard">Open live demo <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
       {% elif operations_url %}
       <a class="btn btn-primary" href="{{ operations_url }}/dashboard">Open live demo <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
@@ -46,7 +49,7 @@
           <figcaption class="p-3">
             <h3 class="h5 mb-2">{{ title }}</h3>
             <p class="small text-secondary mb-3">{{ description }}</p>
-            {% if operations_enabled is not defined or operations_enabled %}
+            {% if classic_demo or operations_enabled is not defined or operations_enabled %}
             <a class="btn btn-sm btn-outline-primary" href="{{ path }}">Open {{ title }} <i class="bi bi-arrow-up-right ms-1" aria-hidden="true"></i></a>
             {% elif operations_url %}
             <a class="btn btn-sm btn-outline-primary" href="{{ operations_url }}{{ path }}">Open {{ title }} <i class="bi bi-arrow-up-right ms-1" aria-hidden="true"></i></a>

@@ -1,15 +1,26 @@
 {% extends "base.html" %}
-{% block title %}Operations workspace | SIAS Hub{% endblock %}
+{% block title %}SIAS – Operations{% endblock %}
 {% block content %}
-<div class="container py-5" style="max-width:760px">
-  <h1>Operations workspace</h1>
-  {% if operations_url %}
-  <p class="lead text-secondary">Sign in to the SIAS Hub operations workspace to manage equipment, maintenance and customer records.</p>
-  <a href="{{ operations_url }}" class="btn btn-primary">Open operations workspace</a>
-  {% else %}
-  <p class="lead text-secondary">The operations workspace is not available on this website yet.</p>
-  <p>Explore SIAS Hub’s industry solutions and build a solution plan while the workspace is being prepared.</p>
-  <a href="/#planner" class="btn btn-primary">Explore solutions</a>
-  {% endif %}
+<div class="container py-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div><h1 class="h3"><i class="bi bi-grid me-2 text-primary" aria-hidden="true"></i>Operations</h1><p class="text-secondary mb-0">Asset and maintenance workflows alongside your SIAS machine monitoring.</p></div>
+    {% if operations_preview or (current_user and current_user.role == 'admin') %}<a href="/dashboard" class="btn btn-outline-info"><i class="bi bi-speedometer2 me-2" aria-hidden="true"></i>Back to Dashboard</a>{% else %}<a href="/" class="btn btn-outline-info">SIAS home</a>{% endif %}
+  </div>
+  {% if operations_preview %}
+  <div class="alert alert-secondary mb-4" role="note">
+    <strong>Workspace preview</strong><p class="mb-0 mt-1">Explore example assets, work orders, access roles and notifications. These examples are not customer records. The full workspace saves records and applies account permissions.</p>
+    {% if operations_url %}<a href="{{ operations_url }}" class="btn btn-primary mt-3">Open full operations workspace</a>{% else %}<p class="small mt-2 mb-0">The full operations workspace is not connected to this deployment yet. Industry discovery and solution planning are available now.</p>{% endif %}
+  </div>
+  {% else %}<p class="small text-secondary mb-4">Your account role and customer determine which operations you can access.</p>{% endif %}
+  <div class="row g-4">
+    {% for module in operations_modules %}
+    <div class="col-md-6 col-xl-4"><article class="card text-light h-100 p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3"><i class="bi bi-{{ module.icon }} fs-3 text-info" aria-hidden="true"></i>{% if operations_preview %}<span class="badge {{ 'bg-success' if module.id == 'industries' else 'bg-secondary' }}">{{ 'Available' if module.id == 'industries' else 'Example preview' }}</span>{% endif %}</div>
+      <h2 class="h5">{{ module.name }}</h2><p class="small text-secondary flex-grow-1">{{ module.description }}</p>
+      <a href="{{ '/operations/' ~ module.id if operations_preview else module.path }}" class="btn btn-outline-info">{{ 'Explore industries' if module.id == 'industries' else ('Preview module' if operations_preview else 'Open module') }}<i class="bi bi-arrow-right ms-2" aria-hidden="true"></i></a>
+      {% if operations_preview and operations_url and module.id != 'industries' %}<a href="{{ operations_url ~ module.path }}" class="small mt-3">Open in full workspace</a>{% endif %}
+    </article></div>
+    {% endfor %}
+  </div>
 </div>
 {% endblock %}

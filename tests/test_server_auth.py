@@ -77,6 +77,29 @@ class ServerAccessTests(unittest.TestCase):
         self.server._broadcast_update({'test': False})
         self.assertFalse(socket.is_connected())
 
+    def test_operations_requires_login_and_limits_modules_by_role(self):
+        for path in ['/operations', '/operations/assets', '/operations/users']:
+            self.assertEqual(self.client.get(path).location, '/login', path)
+        self.login('viewer')
+        response = self.client.get('/operations')
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn('href="/assets"', html)
+        self.assertNotIn('href="/users"', html)
+        self.assertNotIn('Example preview', html)
+        self.assertEqual(self.client.get('/operations/assets').location, '/assets')
+        self.assertEqual(self.client.get('/operations/users').status_code, 403)
+        self.assertEqual(self.client.get('/users').status_code, 403)
+        self.assertEqual(self.client.get('/industry-hub').status_code, 200)
+
+    def test_administrator_operations_opens_existing_modules(self):
+        self.login('operator')
+        html = self.client.get('/operations').get_data(as_text=True)
+        self.assertIn('href="/users"', html)
+        for module in ['assets', 'work-orders', 'telemetry', 'notifications', 'users']:
+            self.assertEqual(self.client.get('/operations/' + module).location, '/' + module)
+        self.assertEqual(self.client.get('/operations/industries').location, '/industry-hub')
+
     def test_customer_socket_rejected(self):
         self.login('viewer')
         socket = self.server.socketio.test_client(self.server.app, flask_test_client=self.client)

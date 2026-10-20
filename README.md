@@ -567,8 +567,24 @@ files are used. History and ML training may reset on instance changes, inactivit
 or cache eviction. This is a working demo, not durable customer data storage. See [the runtime guide](docs/vercel_simulation.md).
 
 The full account-based operations app still runs with `python app.py` or Docker
-on hosting with durable storage. The industry catalog is retained at
-`/industry-hub` in that authenticated application.
+on hosting with durable storage.
+
+### Operations alongside the original SIAS screens
+
+The **Operations** dropdown opens `/operations` without replacing the original
+home, Dashboard, PLC Monitor or Maintenance layout. It groups customers/sites/assets,
+maintenance work orders, equipment telemetry, maintenance notifications, user access
+and industry solutions.
+
+On Vercel, the first five modules show explicitly labeled, searchable sample tables.
+They do not create customer records, manage accounts or send notifications. Industry
+discovery and the browser-local solution planner are available at `/industry-hub`,
+including JSON export. Set `SIAS_OPERATIONS_URL` to a clean HTTPS URL for a separately
+hosted full workspace to add links to its operational modules.
+
+In the authenticated application, Operations opens the existing persistent modules
+and respects account roles and customer access. User administration remains limited
+to administrators. The public simulator does not expose those modules' write APIs.
 
 Vercel requires verified commits. Publish through GitHub's signed commit API or a
 properly configured signing key; do not disable commit verification. Check the
