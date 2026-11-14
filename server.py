@@ -17,6 +17,8 @@ from app.asset_routes import assets_bp
 from app.auth import install_auth, authenticated_user
 from app.notifications import notifications_bp
 from app.telemetry import telemetry_bp
+from app.modules_routes import register_modules_routes
+from app.modules_integration import init_modules
 from app.models.hub import CAPABILITIES, INDUSTRIES
 from app.models.sensor import SensorSimulator
 from app.models.plc_adapter import build_plc_adapter
@@ -34,6 +36,11 @@ app.register_blueprint(notifications_bp)
 app.register_blueprint(telemetry_bp)
 app.config["SESSION_COOKIE_SECURE"] = os.environ.get("SIAS_COOKIE_SECURE", "0") == "1"
 install_auth(app)
+
+# Initialize 3SIAS modules
+init_modules(app)
+register_modules_routes(app)
+
 socketio = SocketIO(app, async_mode="threading")
 
 # ---------------------------------------------------------------------------

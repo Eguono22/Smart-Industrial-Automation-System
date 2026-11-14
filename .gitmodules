@@ -1,0 +1,9 @@
+[submodule "modules/machine-simulator"]
+	path = modules/machine-simulator
+	url = https://github.com/Eguono22/sias-hub-industrial-machine-simulator.git
+[submodule "modules/digital-twin"]
+	path = modules/digital-twin
+	url = https://github.com/Eguono22/sias-hub-industrial-digital-twin.git
+[submodule "modules/predictive-maintenance"]
+	path = modules/predictive-maintenance
+	url = https://github.com/Eguono22/sias-hub-ai-predictive-maintenance.git
