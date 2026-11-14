@@ -19,6 +19,7 @@ from app.notifications import notifications_bp
 from app.telemetry import telemetry_bp
 from app.modules_routes import register_modules_routes
 from app.modules_integration import init_modules
+from app.module_features import register_module_features
 from app.models.hub import CAPABILITIES, INDUSTRIES
 from app.models.sensor import SensorSimulator
 from app.models.plc_adapter import build_plc_adapter
@@ -40,6 +41,7 @@ install_auth(app)
 # Initialize 3SIAS modules
 init_modules(app)
 register_modules_routes(app)
+register_module_features(app)
 
 socketio = SocketIO(app, async_mode="threading")
 
