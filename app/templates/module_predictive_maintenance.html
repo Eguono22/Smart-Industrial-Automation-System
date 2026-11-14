@@ -1,0 +1,531 @@
+{% extends "base.html" %}
+
+{% block title %}Predictive Maintenance Dashboard{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.css">
+<style>
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .health-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-left: 5px solid #27ae60;
+    }
+    
+    .health-card.critical {
+        border-left-color: #e74c3c;
+        background: #fdedec;
+    }
+    
+    .health-card.warning {
+        border-left-color: #f39c12;
+        background: #fef5e7;
+    }
+    
+    .health-card.caution {
+        border-left-color: #e67e22;
+        background: #fdebd0;
+    }
+    
+    .machine-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #ecf0f1;
+    }
+    
+    .machine-name {
+        font-size: 18px;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    
+    .health-score {
+        display: inline-block;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        font-weight: bold;
+        color: white;
+        background: #27ae60;
+        position: relative;
+    }
+    
+    .health-score.critical {
+        background: #e74c3c;
+    }
+    
+    .health-score.warning {
+        background: #f39c12;
+    }
+    
+    .health-score.caution {
+        background: #e67e22;
+    }
+    
+    .health-label {
+        font-size: 10px;
+        text-align: center;
+        margin-top: 2px;
+    }
+    
+    .prediction-section {
+        background: #f8f9fa;
+        padding: 12px;
+        border-radius: 5px;
+        margin: 12px 0;
+    }
+    
+    .prediction-title {
+        font-size: 12px;
+        font-weight: bold;
+        color: #2c3e50;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+    }
+    
+    .prediction-box {
+        background: white;
+        border-left: 3px solid #3498db;
+        padding: 10px;
+        border-radius: 3px;
+        margin-bottom: 8px;
+    }
+    
+    .prediction-box.critical {
+        border-left-color: #e74c3c;
+        background: #fdedec;
+    }
+    
+    .prediction-box.warning {
+        border-left-color: #f39c12;
+        background: #fef5e7;
+    }
+    
+    .prediction-time {
+        font-size: 11px;
+        color: #7f8c8d;
+        margin-bottom: 4px;
+    }
+    
+    .prediction-text {
+        font-size: 13px;
+        color: #2c3e50;
+        font-weight: 500;
+    }
+    
+    .health-metrics {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin: 12px 0;
+    }
+    
+    .metric {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 5px;
+    }
+    
+    .metric-label {
+        font-size: 10px;
+        color: #7f8c8d;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+    }
+    
+    .metric-value {
+        font-size: 16px;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    
+    .metric-unit {
+        font-size: 11px;
+        color: #95a5a6;
+        margin-left: 3px;
+    }
+    
+    .work-order-btn {
+        width: 100%;
+        padding: 10px;
+        margin-top: 12px;
+        background: #27ae60;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .work-order-btn:hover {
+        background: #229954;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .work-order-btn.warning {
+        background: #f39c12;
+        color: white;
+    }
+    
+    .work-order-btn.warning:hover {
+        background: #e67e22;
+    }
+    
+    .work-order-btn.critical {
+        background: #e74c3c;
+        color: white;
+    }
+    
+    .work-order-btn.critical:hover {
+        background: #c0392b;
+    }
+    
+    .summary-panel {
+        background: white;
+        border-radius: 8px;
+        padding: 25px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 30px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 20px;
+    }
+    
+    .summary-stat {
+        text-align: center;
+    }
+    
+    .summary-stat-value {
+        font-size: 28px;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    
+    .summary-stat-label {
+        font-size: 12px;
+        color: #7f8c8d;
+        text-transform: uppercase;
+        margin-top: 5px;
+    }
+    
+    .refresh-info {
+        text-align: right;
+        color: #95a5a6;
+        font-size: 12px;
+        margin-top: 10px;
+    }
+    
+    .loading {
+        text-align: center;
+        padding: 40px;
+        color: #7f8c8d;
+    }
+    
+    .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #27ae60;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 15px;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: #ecf0f1;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 8px;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: #27ae60;
+        transition: width 0.3s;
+    }
+    
+    .progress-fill.warning {
+        background: #f39c12;
+    }
+    
+    .progress-fill.critical {
+        background: #e74c3c;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="page-header">
+        <h1>🔮 Predictive Maintenance Dashboard</h1>
+        <p>AI-powered equipment health monitoring and failure predictions</p>
+    </div>
+
+    <!-- Summary Panel -->
+    <div class="summary-panel">
+        <div class="summary-stat">
+            <div class="summary-stat-value" id="total-machines">0</div>
+            <div class="summary-stat-label">Total Machines</div>
+        </div>
+        <div class="summary-stat">
+            <div class="summary-stat-value" id="healthy-machines">0</div>
+            <div class="summary-stat-label">Healthy</div>
+        </div>
+        <div class="summary-stat">
+            <div class="summary-stat-value" id="warning-machines">0</div>
+            <div class="summary-stat-label">Warning</div>
+        </div>
+        <div class="summary-stat">
+            <div class="summary-stat-value" id="critical-machines">0</div>
+            <div class="summary-stat-label">Critical</div>
+        </div>
+        <div class="summary-stat">
+            <div class="summary-stat-value" id="open-work-orders">0</div>
+            <div class="summary-stat-label">Work Orders</div>
+        </div>
+    </div>
+
+    <div class="refresh-info">
+        Last updated: <span id="last-updated">--:--:--</span> | 
+        <button class="btn btn-sm btn-primary" onclick="refreshData()">Refresh Now</button>
+    </div>
+
+    <!-- Health Cards Grid -->
+    <div class="dashboard-grid" id="health-container">
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>Loading fleet health data...</p>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script>
+const API_BASE = '/api/modules';
+
+async function loadFleet() {
+    try {
+        const response = await fetch(`${API_BASE}/predictive-maintenance/fleet`);
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+            renderFleet(result.data);
+            updateSummary(result.data);
+        }
+    } catch (error) {
+        console.error('Error loading fleet:', error);
+        document.getElementById('health-container').innerHTML = 
+            '<div class="alert alert-danger">Failed to load fleet data. Please try again.</div>';
+    }
+}
+
+async function loadMachineHealth(machineId) {
+    try {
+        const response = await fetch(`${API_BASE}/predictive-maintenance/health/${machineId}`);
+        return await response.json();
+    } catch (error) {
+        console.error(`Error loading health for ${machineId}:`, error);
+        return null;
+    }
+}
+
+async function loadPredictions(machineId) {
+    try {
+        const response = await fetch(`${API_BASE}/predictive-maintenance/predict/${machineId}`);
+        return await response.json();
+    } catch (error) {
+        console.error(`Error loading predictions for ${machineId}:`, error);
+        return null;
+    }
+}
+
+function renderFleet(machines) {
+    const container = document.getElementById('health-container');
+    
+    if (!machines || machines.length === 0) {
+        container.innerHTML = '<div class="alert alert-info">No fleet data available. Ensure the predictive maintenance module is running.</div>';
+        return;
+    }
+    
+    container.innerHTML = machines.map(machine => `
+        <div class="health-card ${getMachineHealthClass(machine)}">
+            <div class="machine-header">
+                <div class="machine-name">${machine.name || machine.id}</div>
+                <div class="health-score ${getHealthScoreClass(machine.health_score)}">
+                    ${Math.round(machine.health_score || 0)}%
+                </div>
+            </div>
+            
+            <div class="progress-bar">
+                <div class="progress-fill ${getProgressClass(machine.health_score)}" style="width: ${machine.health_score || 0}%"></div>
+            </div>
+            
+            <div class="health-metrics">
+                <div class="metric">
+                    <div class="metric-label">Status</div>
+                    <div class="metric-value">${machine.status || 'unknown'}</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Risk Level</div>
+                    <div class="metric-value">${machine.risk_level || 'N/A'}</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Uptime</div>
+                    <div class="metric-value">${(machine.uptime_percentage || 0).toFixed(1)}<span class="metric-unit">%</span></div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Cycles</div>
+                    <div class="metric-value">${machine.total_cycles || 0}</div>
+                </div>
+            </div>
+            
+            ${machine.next_failure_prediction ? `
+                <div class="prediction-section">
+                    <div class="prediction-title">⚠️ Failure Prediction</div>
+                    <div class="prediction-box ${getPredictionClass(machine.next_failure_prediction.confidence)}">
+                        <div class="prediction-time">
+                            Predicted in: <strong>${machine.next_failure_prediction.days_until_failure || 'N/A'} days</strong>
+                        </div>
+                        <div class="prediction-text">
+                            ${machine.next_failure_prediction.prediction_text || 'No specific failure predicted'}
+                        </div>
+                        <div class="prediction-time" style="margin-top: 6px;">
+                            Confidence: ${(machine.next_failure_prediction.confidence * 100 || 0).toFixed(1)}%
+                        </div>
+                    </div>
+                </div>
+            ` : ''}
+            
+            ${machine.recommended_actions && machine.recommended_actions.length > 0 ? `
+                <div class="prediction-section">
+                    <div class="prediction-title">📋 Recommended Actions</div>
+                    ${machine.recommended_actions.map(action => `
+                        <div style="background: #e8f8f5; border-left: 3px solid #16a085; padding: 8px; border-radius: 3px; margin-bottom: 6px; font-size: 12px;">
+                            ${action}
+                        </div>
+                    `).join('')}
+                </div>
+            ` : ''}
+            
+            <button class="work-order-btn ${getButtonClass(machine.health_score)}" onclick="createWorkOrder('${machine.id}', '${machine.name}')">
+                ${getButtonText(machine.health_score)}
+            </button>
+        </div>
+    `).join('');
+}
+
+function getMachineHealthClass(machine) {
+    const score = machine.health_score || 100;
+    if (score < 40) return 'critical';
+    if (score < 70) return 'warning';
+    if (score < 85) return 'caution';
+    return '';
+}
+
+function getHealthScoreClass(score) {
+    if (score < 40) return 'critical';
+    if (score < 70) return 'warning';
+    if (score < 85) return 'caution';
+    return '';
+}
+
+function getProgressClass(score) {
+    if (score < 40) return 'critical';
+    if (score < 70) return 'warning';
+    return '';
+}
+
+function getPredictionClass(confidence) {
+    if (confidence > 0.7) return 'critical';
+    if (confidence > 0.4) return 'warning';
+    return '';
+}
+
+function getButtonClass(score) {
+    if (score < 40) return 'critical';
+    if (score < 70) return 'warning';
+    return '';
+}
+
+function getButtonText(score) {
+    if (score < 40) return 'Create Urgent Work Order';
+    if (score < 70) return 'Create Work Order';
+    return 'View Full Report';
+}
+
+function updateSummary(machines) {
+    const healthy = machines.filter(m => (m.health_score || 100) >= 85).length;
+    const warning = machines.filter(m => (m.health_score || 100) < 85 && m.health_score >= 70).length;
+    const critical = machines.filter(m => (m.health_score || 100) < 40).length;
+    const openOrders = machines.reduce((sum, m) => sum + (m.active_work_orders || 0), 0);
+    
+    document.getElementById('total-machines').textContent = machines.length;
+    document.getElementById('healthy-machines').textContent = healthy;
+    document.getElementById('warning-machines').textContent = warning;
+    document.getElementById('critical-machines').textContent = critical;
+    document.getElementById('open-work-orders').textContent = openOrders;
+    document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
+}
+
+async function createWorkOrder(machineId, machineName) {
+    const description = prompt(`Describe the work order for ${machineName}:`, 'Preventive maintenance based on predictive analytics');
+    
+    if (!description) return;
+    
+    try {
+        const response = await fetch(`${API_BASE}/predictive-maintenance/work-order`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                machine_id: machineId,
+                description: description,
+                priority: 'high'
+            })
+        });
+        
+        const result = await response.json();
+        if (result.status === 'success') {
+            alert('Work order created successfully!');
+            refreshData();
+        } else {
+            alert(`Error: ${result.data || 'Failed to create work order'}`);
+        }
+    } catch (error) {
+        console.error('Error creating work order:', error);
+        alert('Failed to create work order. Please try again.');
+    }
+}
+
+function refreshData() {
+    loadFleet();
+}
+
+// Initial load and auto-refresh every 10 seconds
+loadFleet();
+setInterval(refreshData, 10000);
+</script>
+{% endblock %}

@@ -154,6 +154,31 @@ def maintenance():
     return render_template("maintenance.html")
 
 
+# Phase 3: Module Dashboards
+@app.route("/modules")
+def modules_hub():
+    """Central hub for all 3SIAS modules"""
+    return render_template("modules_hub.html")
+
+
+@app.route("/modules/machine-simulator")
+def module_machine_simulator():
+    """Machine Simulator Dashboard - Real-time telemetry and fault monitoring"""
+    return render_template("module_machine_simulator.html")
+
+
+@app.route("/modules/digital-twin")
+def module_digital_twin():
+    """Digital Twin Dashboard - 3D asset synchronization and visualization"""
+    return render_template("module_digital_twin.html")
+
+
+@app.route("/modules/predictive-maintenance")
+def module_predictive_maintenance():
+    """Predictive Maintenance Dashboard - AI-powered health monitoring"""
+    return render_template("module_predictive_maintenance.html")
+
+
 @app.route("/health")
 def health():
     return jsonify({"ok": True, "status": "healthy", "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")})
