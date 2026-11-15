@@ -1,0 +1,482 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sias-prod
+  labels:
+    environment: production
+    region: primary
+    managed-by: terraform
+
+---
+# ConfigMap for application configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sias-config
+  namespace: sias-prod
+data:
+  APP_ENV: "production"
+  LOG_LEVEL: "info"
+  CACHE_ENABLED: "true"
+  CACHE_SIZE: "1024"
+  DB_POOL_SIZE: "20"
+  MAX_CONNECTIONS: "1000"
+  METRICS_ENABLED: "true"
+  MONITORING_INTERVAL: "30"
+
+---
+# Secret for sensitive data
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sias-secrets
+  namespace: sias-prod
+type: Opaque
+stringData:
+  DATABASE_URL: "postgresql://user:password@sias-db:5432/sias_db"
+  REDIS_URL: "redis://sias-redis:6379"
+  JWT_SECRET: "your-secret-key-change-in-production"
+  API_KEY: "your-api-key-change-in-production"
+
+---
+# ServiceAccount for RBAC
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sias-app
+  namespace: sias-prod
+
+---
+# ClusterRole for monitoring and health checks
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sias-app-role
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets", "statefulsets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list", "watch"]
+
+---
+# ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: sias-app-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: sias-app-role
+subjects:
+- kind: ServiceAccount
+  name: sias-app
+  namespace: sias-prod
+
+---
+# Main SIAS API Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sias-api
+  namespace: sias-prod
+  labels:
+    app: sias-api
+    version: v8.5.0
+spec:
+  replicas: 5
+  revisionHistoryLimit: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: sias-api
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: sias-api
+        tier: backend
+        version: v8.5.0
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: sias-app
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - sias-api
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: sias-api
+        image: sias:8.5.0-prod
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        - name: websocket
+          containerPort: 8080
+          protocol: TCP
+        - name: metrics
+          containerPort: 9090
+          protocol: TCP
+        env:
+        - name: DEPLOYMENT_ENVIRONMENT
+          value: "kubernetes"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        envFrom:
+        - configMapRef:
+            name: sias-config
+        - secretRef:
+            name: sias-secrets
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+            ephemeral-storage: 1Gi
+          limits:
+            cpu: 1000m
+            memory: 1024Mi
+            ephemeral-storage: 2Gi
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8000
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8000
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+          successThreshold: 1
+        startupProbe:
+          httpGet:
+            path: /health/startup
+            port: 8000
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 30
+        volumeMounts:
+        - name: logs
+          mountPath: /var/log/sias
+        - name: cache
+          mountPath: /var/cache/sias
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: logs
+        emptyDir:
+          sizeLimit: 1Gi
+      - name: cache
+        emptyDir:
+          sizeLimit: 2Gi
+      securityContext:
+        fsGroup: 1000
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+
+---
+# API Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: sias-api-svc
+  namespace: sias-prod
+  labels:
+    app: sias-api
+spec:
+  type: LoadBalancer
+  selector:
+    app: sias-api
+    tier: backend
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8000
+    protocol: TCP
+  - name: websocket
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800
+  loadBalancerSourceRanges: []
+
+---
+# Horizontal Pod Autoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: sias-api-hpa
+  namespace: sias-prod
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: sias-api
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+      - type: Pods
+        value: 1
+        periodSeconds: 60
+      selectPolicy: Min
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+      - type: Pods
+        value: 2
+        periodSeconds: 15
+      selectPolicy: Max
+
+---
+# Pod Disruption Budget for high availability
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: sias-api-pdb
+  namespace: sias-prod
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: sias-api
+
+---
+# Prometheus ServiceMonitor for metrics collection
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: sias-api-monitor
+  namespace: sias-prod
+spec:
+  selector:
+    matchLabels:
+      app: sias-api
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+
+---
+# Network Policy for security
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sias-api-netpol
+  namespace: sias-prod
+spec:
+  podSelector:
+    matchLabels:
+      app: sias-api
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: sias-ingress
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8000
+    - protocol: TCP
+      port: 8080
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: sias-db
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:
+    - podSelector:
+        matchLabels:
+          app: sias-redis
+    ports:
+    - protocol: TCP
+      port: 6379
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+
+---
+# Ingress for external access
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sias-ingress
+  namespace: sias-prod
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  tls:
+  - hosts:
+    - api.sias.example.com
+    secretName: sias-api-tls
+  rules:
+  - host: api.sias.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: sias-api-svc
+            port:
+              number: 80
+
+---
+# Vertical Pod Autoscaler (for right-sizing)
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: sias-api-vpa
+  namespace: sias-prod
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: sias-api
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: sias-api
+      minAllowed:
+        cpu: 100m
+        memory: 128Mi
+      maxAllowed:
+        cpu: 2000m
+        memory: 2048Mi
+      controlledResources: ["cpu", "memory"]
+
+---
+# Prometheus Rules for alerting
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: sias-api-alerts
+  namespace: sias-prod
+spec:
+  groups:
+  - name: sias.rules
+    interval: 30s
+    rules:
+    - alert: SIASHighErrorRate
+      expr: rate(sias_total_errors[5m]) / rate(sias_total_requests[5m]) > 0.01
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: "SIAS API has high error rate"
+        description: "Error rate is {{ $value | humanizePercentage }}"
+    
+    - alert: SIASSlowResponse
+      expr: sias_endpoint_p95_response_time > 300
+      for: 10m
+      labels:
+        severity: warning
+      annotations:
+        summary: "SIAS API responses are slow"
+        description: "P95 response time is {{ $value }}ms"
+    
+    - alert: SIASHighCPUUsage
+      expr: sum(rate(container_cpu_usage_seconds_total[5m])) > 0.8
+      for: 10m
+      labels:
+        severity: warning
+      annotations:
+        summary: "SIAS pod has high CPU usage"
+        description: "CPU usage is {{ $value | humanizePercentage }}"
+    
+    - alert: SIASHighMemoryUsage
+      expr: container_memory_usage_bytes / 1024 / 1024 > 800
+      for: 10m
+      labels:
+        severity: warning
+      annotations:
+        summary: "SIAS pod has high memory usage"
+        description: "Memory usage is {{ $value }}MB"
