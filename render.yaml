@@ -10,7 +10,6 @@ services:
     dockerContext: .
     healthCheckPath: /ready
     autoDeployTrigger: checksPass
-    maxShutdownDelaySeconds: 40
     disk:
       name: sias-data
       mountPath: /app/instance
