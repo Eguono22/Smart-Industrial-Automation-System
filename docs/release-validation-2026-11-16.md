@@ -18,6 +18,13 @@ or industrial equipment safety.
   CSRF rejection, logout, and authentication rejection after logout.
 - Restarted Gunicorn against the same isolated SQLite database and repeated the
   smoke check successfully, confirming account persistence across processes.
+- Built the production Docker image and verified UID/GID 10001, a non-default
+  listening port, authenticated HTTP and WebSocket flows, a consistent database
+  backup, and successful login after restarting against the same named volume.
+  The temporary container and validation volume were removed afterward.
+- Render's platform planner accepted the Blueprint after removing an unsupported
+  shutdown-delay setting for disk-backed services. The reviewed plan creates one
+  new operations web service and does not change existing module services.
 
 All server checks used a temporary database and a randomly generated validation
 administrator; no customer records or existing production services were changed.
