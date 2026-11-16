@@ -1,8 +1,19 @@
 # Smart Industrial Automation System (SIAS) - PROJECT STATUS
 
-**Last Updated**: 2024-11-14  
-**Project Status**: ✅ **PHASE 8 COMPLETE - ENTERPRISE PRODUCTION READY**  
-**Overall Progress**: 100% (8/8 phases complete)
+> **Verification update (2026-11-15):** The phase statuses and production-readiness
+> claims below are historical and have not been independently verified. The current
+> app is described in [README.md](README.md). Previously verified locally on
+> Python 3.9.6: root SIAS tests **109 passed**; machine simulator **5 passed**.
+> Follow-up verification on Python **3.12.16**: predictive-maintenance backend
+> **13 passed**; digital-twin backend **23 passed, 0 skipped** against isolated
+> TimescaleDB with application retention. TimescaleDB policy retention also passed
+> separately. Both module frontends passed TypeScript checks and production builds
+> on Node **24.21.0**; digital-twin frontend tests **5 passed**.
+> See [validation evidence](docs/validation-2026-11-15.md) for commands and limits.
+> These results do not verify deployment, production SLAs, or compliance.
+
+**Last Updated**: 2026-11-15
+**Project Status**: Current implementation and operational readiness require further validation.
 
 ---
 

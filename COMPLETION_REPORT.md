@@ -1,8 +1,15 @@
-# 🎉 3SIAS Integration - PROJECT COMPLETION REPORT
+# 🎉 SIASHUB Integration - PROJECT COMPLETION REPORT
+
+> **Scope and verification note (2026-11-15):** This is a historical report about the
+> earlier SIASHUB module-integration effort, not a current production-readiness
+> assessment. Its performance, availability, coverage, and compliance figures are
+> reported claims/targets and have not been independently verified here. For the
+> current simulation-first SIAS application and its supported features, see
+> [README.md](README.md).
 
 **Project**: Smart Industrial Automation System - 3 Module Integration  
 **Status**: ✅ **100% COMPLETE** (Phases 1-7)  
-**Date Completed**: 2024  
+**Date Completed**: 2026
 **Total Commits**: 36  
 **Total Implementation**: 158.9 KB code + documentation  
 

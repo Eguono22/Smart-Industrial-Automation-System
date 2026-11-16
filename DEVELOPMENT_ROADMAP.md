@@ -1,5 +1,18 @@
 # 3SIAS Development Roadmap
 
+> **Historical plan, not current status:** The phase checklists and examples below
+> describe an earlier module-integration plan. They are retained for context and
+> should not be read as a current implementation checklist. The current app is
+> described in [README.md](README.md); current verification results are recorded
+> in [PROJECT_STATUS.md](PROJECT_STATUS.md).
+>
+> **Verification milestone completed (2026-11-15):** Predictive-maintenance
+> tests passed on Python 3.12; the digital-twin database integration checks and
+> both frontend builds/typechecks passed. See the [validation evidence](docs/validation-2026-11-15.md).
+> **Recommended next milestone:** Define an explicit deployment target and verify
+> hosted API connectivity, persistent storage, and browser workflows there before
+> treating production deployment or Phase 9 as verified.
+
 ## Phase 1: Module Exploration & Understanding
 **Duration: 1-2 days | Priority: HIGH**
 

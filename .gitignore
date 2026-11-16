@@ -33,5 +33,8 @@ artifacts/
 docs/evidence/
 .run/
 
+# A nested clone of this repository is not part of the project test tree.
+Smart-Industrial-Automation-System/
+
 # Vercel local metadata and environment downloads
 .vercel/
