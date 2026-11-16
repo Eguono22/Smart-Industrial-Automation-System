@@ -170,6 +170,7 @@ On Windows PowerShell, activate the virtual environment with:
 ## Tests and demo
 
 ```bash
+python -m pip install -r requirements-dev.txt
 python -m pytest tests/ -v
 ```
 
@@ -212,13 +213,17 @@ See [docs/demo_walkthrough.md](docs/demo_walkthrough.md) for a presentation-read
 
 ```bash
 docker build -t sias .
-docker run --rm -p 5000:5000 sias
+docker run --rm -p 5000:5000 -v sias-data:/app/instance sias
 ```
+
+For the production Render deployment, administrator setup, backups, and rollback,
+see [the production runbook](docs/production.md). Install `requirements-dev.txt`
+when running tests. The runtime image contains only production dependencies.
 
 ### Operations endpoints
 
 - `GET /health` - liveness
-- `GET /ready` - readiness + PLC/model readiness details (includes active `coil_map` in Modbus mode)
+- `GET /ready` - storage and telemetry-loop readiness; returns 503 when unavailable, plus PLC/model details
 - `GET /metrics` - basic request and uptime metrics
 
 ### Smoke test

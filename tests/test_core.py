@@ -395,3 +395,28 @@ class TestRulLabel:
 
     def test_rul_hours(self):
         assert _rul_label(4) == "~4 hrs"
+
+
+def test_truncated_model_checkpoint_recovers(tmp_path, monkeypatch):
+    checkpoint = tmp_path / 'model.pkl'
+    checkpoint.write_bytes(b'')
+    monkeypatch.setenv('SIAS_MODEL_PATH', str(checkpoint))
+    engine = PredictiveMaintenanceEngine()
+    assert not engine._trained
+
+
+def test_failed_checkpoint_replacement_keeps_previous_model(tmp_path, monkeypatch):
+    checkpoint = tmp_path / 'model.pkl'
+    checkpoint.write_bytes(b'previous checkpoint')
+    engine = PredictiveMaintenanceEngine(persist=False)
+    engine._model_path = str(checkpoint)
+    engine._persist_enabled = True
+    engine._trained = True
+    engine._model = {'fixture': True}
+    engine._scaler = {'fixture': True}
+    def fail_replace(*args):
+        raise OSError('disk unavailable')
+    monkeypatch.setattr('app.models.predictor.os.replace', fail_replace)
+    engine._save_model()
+    assert checkpoint.read_bytes() == b'previous checkpoint'
+    assert list(tmp_path.iterdir()) == [checkpoint]

@@ -7,6 +7,7 @@ import threading
 import time
 import os
 import uuid
+import sqlite3
 from datetime import datetime, timezone
 
 from flask import Flask, render_template, jsonify, request, g, session
@@ -24,11 +25,13 @@ from app.models.hub import CAPABILITIES, INDUSTRIES
 from app.models.sensor import SensorSimulator
 from app.models.plc_adapter import build_plc_adapter
 from app.models.predictor import PredictiveMaintenanceEngine
+from app.models.assets import AssetRegistry
 
 # ---------------------------------------------------------------------------
 # App & SocketIO setup
 # ---------------------------------------------------------------------------
 app = Flask(__name__, template_folder="app/templates", static_folder="app/static")
+app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "sias-dev-secret")
 app.config["SIAS_DATABASE_PATH"] = os.environ.get("SIAS_DATABASE_PATH", os.path.join(app.instance_path, "sias.sqlite3"))
 app.register_blueprint(assets_bp)
@@ -55,6 +58,7 @@ plc = build_plc_adapter()
 predictor = PredictiveMaintenanceEngine()
 _started_at = time.time()
 _request_metrics = {"total": 0, "errors": 0}
+_last_update_at = time.monotonic()
 
 # Start machine by default for demo
 plc.start_machine()
@@ -80,6 +84,7 @@ def _broadcast_update(payload):
 
 def _background_update():
     """Reads sensors, runs PLC scan and ML analysis; broadcasts via SocketIO."""
+    global _last_update_at
     while True:
         time.sleep(_UPDATE_INTERVAL)
         with _lock:
@@ -88,6 +93,7 @@ def _background_update():
             prediction = predictor.update(sd)
             plc_status = plc.get_status()
             demo_status = sensor_sim.get_demo_status()
+            _last_update_at = time.monotonic()
 
         payload = {
             "sensors": sd,
@@ -186,6 +192,16 @@ def health():
 
 @app.route("/ready")
 def ready():
+    try:
+        with AssetRegistry(app.config['SIAS_DATABASE_PATH']).connect() as db:
+            # Exercise a write transaction: a read-only/full disk cannot serve operations.
+            db.execute('BEGIN IMMEDIATE')
+            db.execute("UPDATE auth_settings SET value=value WHERE key='session_secret'")
+    except (sqlite3.Error, OSError):
+        app.logger.exception('Readiness database check failed')
+        return jsonify(ok=False, status='not_ready', reason='storage_unavailable'), 503
+    if os.environ.get('VERCEL') != '1' and time.monotonic() - _last_update_at > 30:
+        return jsonify(ok=False, status='not_ready', reason='telemetry_stalled'), 503
     with _lock:
         status = plc.get_status()
         pred = predictor.get_last_result()

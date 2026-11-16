@@ -1,0 +1,33 @@
+# Single instance: SQLite, simulation state, and Socket.IO share one process.
+services:
+  - type: web
+    name: sias-operations
+    runtime: docker
+    plan: 0.5c-512mb
+    region: oregon
+    numInstances: 1
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /ready
+    autoDeployTrigger: checksPass
+    maxShutdownDelaySeconds: 40
+    disk:
+      name: sias-data
+      mountPath: /app/instance
+      sizeGB: 1
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: SIAS_COOKIE_SECURE
+        value: "1"
+      # The container is reachable through Render's TLS-terminating ingress.
+      - key: FORWARDED_ALLOW_IPS
+        value: "*"
+      - key: SIAS_DATABASE_PATH
+        value: /app/instance/sias.sqlite3
+      - key: SIAS_MODEL_PATH
+        value: /app/instance/predictor_model.pkl
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PLC_MODE
+        value: sim

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import pickle
+import tempfile
 from collections import deque
 from datetime import datetime, timezone
 
@@ -245,6 +246,7 @@ class PredictiveMaintenanceEngine:
             return
         if not self._trained or self._model is None or self._scaler is None:
             return
+        temporary_path = None
         try:
             model_dir = os.path.dirname(self._model_path)
             if model_dir:
@@ -256,10 +258,20 @@ class PredictiveMaintenanceEngine:
                 "baseline_mean": self._drift_baseline_mean,
                 "baseline_std": self._drift_baseline_std,
             }
-            with open(self._model_path, "wb") as fp:
+            with tempfile.NamedTemporaryFile(mode='wb', dir=model_dir or '.', delete=False) as fp:
+                temporary_path = fp.name
                 pickle.dump(payload, fp)
+                fp.flush()
+                os.fsync(fp.fileno())
+            os.replace(temporary_path, self._model_path)
         except OSError:
             pass
+        finally:
+            if temporary_path and os.path.exists(temporary_path):
+                try:
+                    os.unlink(temporary_path)
+                except OSError:
+                    pass
 
     def _load_model(self):
         if not SKLEARN_AVAILABLE:
@@ -275,7 +287,7 @@ class PredictiveMaintenanceEngine:
             self._drift_baseline_mean = payload.get("baseline_mean")
             self._drift_baseline_std = payload.get("baseline_std")
             self._trained = self._model is not None and self._scaler is not None
-        except (OSError, pickle.UnpicklingError, ValueError, TypeError):
+        except (OSError, EOFError, AttributeError, pickle.UnpicklingError, ValueError, TypeError):
             self._model = None
             self._trained = False
 

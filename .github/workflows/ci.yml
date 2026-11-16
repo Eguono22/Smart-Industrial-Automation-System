@@ -19,11 +19,38 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
 
       - name: Run tests
         run: |
           python -m pytest tests/ -v
+
+      - name: Audit release dependencies
+        run: |
+          pip install pip-audit
+          pip-audit -r requirements-dev.txt
+
+      - name: Validate production container
+        shell: bash
+        run: |
+          docker build -t sias-release .
+          docker run -d --name sias-release -p 127.0.0.1:15000:15000 -e PORT=15000 -v sias-validation:/app/instance sias-release
+          trap 'docker logs sias-release; docker rm -f sias-release; docker volume rm sias-validation' EXIT
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:15000/ready; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:15000/ready
+          export SIAS_ADMIN_USERNAME=release-check
+          export SIAS_ADMIN_PASSWORD="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
+          docker exec -e SIAS_ADMIN_PASSWORD sias-release python -c "import os; from app.auth import create_user; from app.models.assets import AssetRegistry; create_user(AssetRegistry(os.environ['SIAS_DATABASE_PATH']), dict(username='release-check', name='Release check', role='admin', password=os.environ['SIAS_ADMIN_PASSWORD']))"
+          python scripts/production_smoke.py http://127.0.0.1:15000
+          docker restart sias-release
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:15000/ready; then break; fi
+            sleep 2
+          done
+          python scripts/production_smoke.py http://127.0.0.1:15000
 
       - name: Provision validation administrator
         shell: bash

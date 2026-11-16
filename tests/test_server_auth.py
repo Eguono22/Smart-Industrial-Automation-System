@@ -4,6 +4,7 @@ import os
 import sys
 import tempfile
 import types
+import sqlite3
 import unittest
 from unittest.mock import patch
 
@@ -21,6 +22,8 @@ class ServerAccessTests(unittest.TestCase):
         class Engine:
             def update(self, data):
                 return {}
+            def get_last_result(self):
+                return {'model_trained': False}
         predictor.PredictiveMaintenanceEngine = Engine
         cls.environment = patch.dict(os.environ, {'VERCEL': '1', 'SIAS_DATABASE_PATH': cls.path})
         cls.environment.start()
@@ -104,3 +107,18 @@ class ServerAccessTests(unittest.TestCase):
         self.login('viewer')
         socket = self.server.socketio.test_client(self.server.app, flask_test_client=self.client)
         self.assertFalse(socket.is_connected())
+
+    def test_readiness_checks_storage_and_recovers(self):
+        self.assertEqual(self.client.get('/ready').status_code, 200)
+        with patch.object(AssetRegistry, 'connect', side_effect=sqlite3.OperationalError('disk unavailable')):
+            response = self.client.get('/ready')
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.get_json()['reason'], 'storage_unavailable')
+        self.assertEqual(self.client.get('/health').status_code, 200)
+        self.assertEqual(self.client.get('/ready').status_code, 200)
+
+    def test_readiness_detects_stalled_simulation(self):
+        with patch.dict(os.environ, {'VERCEL': '0'}), patch.object(self.server, '_last_update_at', -100):
+            response = self.client.get('/ready')
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.get_json()['reason'], 'telemetry_stalled')

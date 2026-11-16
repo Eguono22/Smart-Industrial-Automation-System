@@ -1,5 +1,14 @@
 # Smart Industrial Automation System (SIAS) - PROJECT STATUS
 
+> **Operations release preparation (2026-11-16):** The root application now has a
+> Render Blueprint with persistent storage, a threaded non-root Docker runtime,
+> locked and audited dependencies, storage/telemetry readiness checks, atomic
+> model checkpoints, and a verified SQLite backup command. Python 3.12 checks:
+> **115 passed** plus **64 subtests**; authenticated Gunicorn HTTP/WebSocket and
+> restart persistence checks passed. Hosted production verification is pending.
+> See [release evidence](docs/release-validation-2026-11-16.md) and the
+> [production runbook](docs/production.md).
+
 > **Verification update (2026-11-15):** The phase statuses and production-readiness
 > claims below are historical and have not been independently verified. The current
 > app is described in [README.md](README.md). Previously verified locally on
