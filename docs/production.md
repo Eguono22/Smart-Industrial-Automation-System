@@ -23,6 +23,11 @@ services in `modules/` have their own deployment configurations and lifecycles.
 6. In the service's Render Shell, run `python scripts/manage_users.py` to create
    your administrator. Choose your own password at the prompt; there is no
    default login. Do not put passwords in the Blueprint or Git.
+   For an installation without shell access, operators can supply
+   `SIAS_INITIAL_ADMIN_USERNAME` and `SIAS_INITIAL_ADMIN_PASSWORD_HASH` at startup.
+   The hash must use Werkzeug's `pbkdf2:sha256:1000000` format. This creates an
+   administrator only in an empty account store, atomically records completion,
+   and never resets existing accounts. Clear both variables after verifying login.
 7. Log in over HTTPS and verify customer/site/asset creation, a work order and its
    completion history, account role restrictions, and live dashboard updates.
    Run `python scripts/production_smoke.py https://YOUR-SERVICE.onrender.com`

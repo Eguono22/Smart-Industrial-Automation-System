@@ -1,5 +1,7 @@
 """Session authentication, CSRF protection and account administration."""
 import hashlib
+import os
+import re
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -87,11 +89,33 @@ def authenticated_user(token=None):
         return public_user(row) if row else None
 
 
+def bootstrap_admin(registry):
+    """Seed an empty installation once using an operator-supplied password hash."""
+    username = os.environ.get('SIAS_INITIAL_ADMIN_USERNAME', '').strip().lower()
+    password_hash = os.environ.get('SIAS_INITIAL_ADMIN_PASSWORD_HASH', '')
+    if not username and not password_hash:
+        return False
+    with registry.connect() as db:
+        db.execute('BEGIN IMMEDIATE')
+        if db.execute('SELECT 1 FROM users LIMIT 1').fetchone() or db.execute(
+                "SELECT 1 FROM auth_settings WHERE key='initial_admin_created'").fetchone():
+            return False
+        if not re.fullmatch(r'[a-z0-9][a-z0-9_.-]{0,199}', username) or not re.fullmatch(
+                r'pbkdf2:sha256:1000000\$[A-Za-z0-9]{16}\$[a-f0-9]{64}', password_hash):
+            raise RuntimeError('Invalid initial administrator username or password hash')
+        db.execute("""INSERT INTO users
+            (username, name, password_hash, role, customer_id, active, email)
+            VALUES (?, 'Administrator', ?, 'admin', NULL, 1, '')""", (username, password_hash))
+        db.execute("INSERT INTO auth_settings (key, value) VALUES ('initial_admin_created', '1')")
+    return True
+
+
 def install_auth(app):
     registry = AssetRegistry(app.config['SIAS_DATABASE_PATH'])
     with registry.connect() as db:
         db.execute("INSERT OR IGNORE INTO auth_settings (key, value) VALUES ('session_secret', ?)", (secrets.token_hex(32),))
         secret = db.execute("SELECT value FROM auth_settings WHERE key='session_secret'").fetchone()[0]
+    bootstrap_admin(registry)
     if not app.config.get('SECRET_KEY') or app.config['SECRET_KEY'] in ('sias-dev-secret', 'change-me'):
         app.config['SECRET_KEY'] = secret
     app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax')
